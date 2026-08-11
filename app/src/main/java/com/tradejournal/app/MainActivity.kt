@@ -58,6 +58,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tradejournal.app.data.Account
+import com.tradejournal.app.data.DiaryNote
 import com.tradejournal.app.data.Trade
 import com.tradejournal.app.data.TradeJournalApplication
 import com.tradejournal.app.data.TradeViewModel
@@ -112,6 +114,17 @@ private enum class AppScreen { HOME, JOURNAL, ANALYSIS, ACCOUNTS, DIARY, ADMIN_H
 private const val DEMO_ADMIN_EMAIL = "admin@tradejournal.dev"
 private const val DEMO_ADMIN_PASSWORD = "AdminDemo123!"
 
+private fun seedAccounts() = listOf(
+    Account(name = "Main account", type = "Live", broker = "Interactive Brokers", balance = 12450.0, equity = 13695.80),
+    Account(name = "Crypto account", type = "Live", broker = "Binance", balance = 8000.0, equity = 8420.15),
+    Account(name = "Practice account", type = "Paper", broker = "Manual", balance = 50000.0, equity = 52180.0),
+)
+
+private fun seedDiaryNotes() = listOf(
+    DiaryNote(noteDate = "March 24, 2026", mood = "Focused", plan = "Focus on patient breakout entries. No trades after two consecutive losses.", reflection = "The best trade was the one where I waited for confirmation."),
+    DiaryNote(noteDate = "March 23, 2026", mood = "Frustrated", plan = "Respect the stop and do not chase.", reflection = "Moved the stop because I wanted to be right."),
+)
+
 private fun seedTrades() = listOf(
     Trade(symbol = "NVDA", market = "Stocks", direction = "Long", setup = "Breakout", result = 240.0, rMultiple = 2.4, status = "Plan followed"),
     Trade(symbol = "EUR/USD", market = "Forex", direction = "Short", setup = "Reversal", result = -85.0, rMultiple = -1.0, status = "Moved stop"),
@@ -128,6 +141,8 @@ private fun TradeJournalApp() {
     val application = androidx.compose.ui.platform.LocalContext.current.applicationContext as TradeJournalApplication
     val tradeViewModel: TradeViewModel = viewModel(factory = TradeViewModel.Factory(application.tradeRepository))
     val trades by tradeViewModel.trades.collectAsStateWithLifecycle()
+    val accounts by tradeViewModel.accounts.collectAsStateWithLifecycle()
+    val diaryNotes by tradeViewModel.diaryNotes.collectAsStateWithLifecycle()
     var showAddTrade by remember { mutableStateOf(false) }
 
     if (!signedIn) {
@@ -144,6 +159,8 @@ private fun TradeJournalApp() {
 
     LaunchedEffect(Unit) {
         tradeViewModel.seedIfEmpty(seedTrades())
+        tradeViewModel.seedAccountsIfEmpty(seedAccounts())
+        tradeViewModel.seedDiaryNotesIfEmpty(seedDiaryNotes())
     }
 
     fun selectScreen(next: AppScreen) {
@@ -175,8 +192,8 @@ private fun TradeJournalApp() {
                             AppScreen.HOME -> UserHome(trades, onAddTrade = { showAddTrade = true }, onOpenAnalysis = { selectScreen(AppScreen.ANALYSIS) })
                             AppScreen.JOURNAL -> JournalScreen(trades, onAddTrade = { showAddTrade = true })
                             AppScreen.ANALYSIS -> AnalysisScreen(trades)
-                            AppScreen.ACCOUNTS -> AccountsScreen()
-                            AppScreen.DIARY -> DiaryScreen()
+                            AppScreen.ACCOUNTS -> AccountsScreen(accounts)
+                            AppScreen.DIARY -> DiaryScreen(diaryNotes, onSave = tradeViewModel::addDiaryNote)
                             AppScreen.ADMIN_HOME -> AdminHome()
                             AppScreen.ADMIN_USERS -> AdminUsers()
                             AppScreen.ADMIN_REPORTS -> AdminReports()
@@ -441,13 +458,27 @@ private fun ProgressRow(label: String, detail: String, progress: Float, positive
 private fun ProgressBar(progress: Float, positive: Boolean = false) { Box(Modifier.fillMaxWidth().height(8.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50))) { Box(Modifier.fillMaxWidth(progress).height(8.dp).background(if (positive) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary, RoundedCornerShape(50))) } }
 
 @Composable
-private fun AccountsScreen() { LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) { item { ScreenHeading("Accounts", "Separate live, paper, and demo performance while keeping one complete view.", "＋ Add account", {}) }; item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) { AccountCard("Main account", "Live · Interactive Brokers", "$13,695.80", "+$1,245.80 this month"); AccountCard("Crypto account", "Live · Binance", "$8,420.15", "+$420.15 this month") } }; item { AccountCard("Practice account", "Paper · Manual", "$50,000.00", "+$2,180.00 this month") }; item { Card { Column(Modifier.padding(18.dp)) { Text("Connections", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Read-only by default", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)); Spacer(Modifier.height(13.dp)); Text("✓  Interactive Brokers · synced today", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp); Text("✓  Binance · synced today", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp)); OutlinedButton(onClick = {}, modifier = Modifier.padding(top = 13.dp)) { Text("Manage connections") } } } } } }
+private fun AccountsScreen(accounts: List<Account>) {
+    LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { ScreenHeading("Accounts", "Separate live, paper, and demo performance while keeping one complete view.", "＋ Add account", {}) }
+        items(accounts, key = { it.id }) { account -> AccountCard(account.name, "${account.type} · ${account.broker}", "${account.currency} ${"%,.2f".format(account.equity)}", "Balance ${account.currency} ${"%,.2f".format(account.balance)}") }
+        item { Card { Column(Modifier.padding(18.dp)) { Text("Connections", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Read-only by default", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)); Spacer(Modifier.height(13.dp)); accounts.filter { it.broker != "Manual" }.forEach { Text("✓  ${it.broker} · local sync ready", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 7.dp)) }; OutlinedButton(onClick = {}, modifier = Modifier.padding(top = 13.dp)) { Text("Manage connections") } } } }
+    }
+}
 
 @Composable
 private fun AccountCard(name: String, kind: String, balance: String, result: String) { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { Row(verticalAlignment = Alignment.Top) { Column(Modifier.weight(1f)) { Text(name, fontWeight = FontWeight.Bold, fontSize = 15.sp); Text(kind, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp) }; AssistChip(onClick = {}, label = { Text("Synced", fontSize = 10.sp) }) }; Text(balance, fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 20.dp)); Text(result, color = MaterialTheme.colorScheme.secondary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp)) } } }
 
 @Composable
-private fun DiaryScreen() { LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) { item { ScreenHeading("Trading diary", "Make your psychology visible without adding another burden.", "＋ New daily note", {}) }; item { Card { Column(Modifier.padding(18.dp)) { Text("Today’s session", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Tuesday, March 24 · Main account", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp); Spacer(Modifier.height(15.dp)); Text("Before trading", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp); OutlinedTextField(value = "Focus on patient breakout entries. No trades after two consecutive losses.", onValueChange = {}, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), minLines = 3); Text("What did you learn?", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp, modifier = Modifier.padding(top = 15.dp)); OutlinedTextField(value = "The best trade was the one where I waited for confirmation.", onValueChange = {}, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), minLines = 3); Button(onClick = {}, modifier = Modifier.padding(top = 12.dp)) { Text("Save diary note") } } } }; item { InsightCard("March 23", "Moved the stop because I wanted to be right.", "23", false) }; item { InsightCard("March 22", "Calm and selective. Followed the checklist.", "22", true) } } }
+private fun DiaryScreen(notes: List<DiaryNote>, onSave: (DiaryNote) -> Unit) {
+    var plan by rememberSaveable { mutableStateOf("") }
+    var reflection by rememberSaveable { mutableStateOf("") }
+    LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { ScreenHeading("Trading diary", "Make your psychology visible without adding another burden.", "＋ New daily note", {}) }
+        item { Card { Column(Modifier.padding(18.dp)) { Text("Today’s session", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Local note · private by default", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp); Spacer(Modifier.height(15.dp)); Text("Before trading", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp); OutlinedTextField(value = plan, onValueChange = { plan = it }, label = { Text("What is your plan today?") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), minLines = 3); Text("What did you learn?", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp, modifier = Modifier.padding(top = 15.dp)); OutlinedTextField(value = reflection, onValueChange = { reflection = it }, label = { Text("Post-session reflection") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), minLines = 3); Button(onClick = { onSave(DiaryNote(noteDate = "Today", mood = "Focused", plan = plan, reflection = reflection)); plan = ""; reflection = "" }, modifier = Modifier.padding(top = 12.dp)) { Text("Save diary note") } } } }
+        items(notes, key = { it.id }) { note -> InsightCard(note.noteDate, note.reflection.ifBlank { note.plan }, note.noteDate.takeLast(2), note.mood != "Frustrated") }
+    }
+}
 
 @Composable
 private fun AdminHome() { LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) { item { ScreenHeading("Admin overview", "Monitor product health, user growth, and privacy-sensitive services.", "Export report", {}) }; item { ResponsiveCards { MetricCard("Active users", "2,480", "+12.4% this month", true); MetricCard("Trades journaled", "184,920", "+8.1% this month", true); MetricCard("Drive sync health", "99.4%", "Within target", true); MetricCard("Premium conversion", "8.7%", "+1.2 pts", true) } }; item { Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) { Card(Modifier.weight(1f)) { Column(Modifier.padding(18.dp)) { Text("Service health", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("No user trade data is shown here by default.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)); HealthRow("Authentication", "Operational", true); HealthRow("CSV import", "Operational", true); HealthRow("Google Drive sync", "Operational", true); HealthRow("Cloud AI", "Consent required", true) } }; Card(Modifier.weight(1f)) { Column(Modifier.padding(18.dp)) { Text("Admin actions", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Safe, aggregate-only controls", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)); OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) { Text("Review import errors") }; OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Manage feature flags") }; OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Open audit log") } } } } }; item { InsightCard("Privacy boundary", "Admin tools see account, subscription, and service health metadata—not private trades or journal notes.", "✓", true) } } }
