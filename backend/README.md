@@ -16,8 +16,20 @@ ROI is calculated as `net P&L / deployed capital × 100`. Deployed capital is `e
 - protected aggregate admin metrics
 - a market quote adapter with a manual fallback
 - CORS allowlisting and security headers
+- Cloudflare Workers Observability with persisted invocation logs, custom logs, and traces
 
 The frontend calls these routes through `VITE_API_BASE_URL`. Configure Supabase and R2 secrets before enabling production writes.
+
+## Observability
+
+`worker/wrangler.toml` enables Cloudflare dashboard observability for the Worker:
+
+- 100% log sampling
+- Persisted invocation logs
+- Persisted traces for fetch, R2, and external calls
+- Dashboard-visible logs and traces after redeployment
+
+Open the deployed Worker in **Workers & Pages → Observability** to inspect events. The current 100% sampling setting is useful for initial debugging; reduce `head_sampling_rate` for logs and traces before sustained high traffic if cost control is required. Do not log access tokens, passwords, vault keys, private journal notes, psychology, screenshots, or raw broker credentials.
 
 ## Responsibilities
 
