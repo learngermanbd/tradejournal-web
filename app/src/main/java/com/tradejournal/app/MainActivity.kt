@@ -39,6 +39,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
@@ -64,8 +65,11 @@ import com.tradejournal.app.data.Account
 import com.tradejournal.app.data.DiaryNote
 import com.tradejournal.app.data.ImportRecord
 import com.tradejournal.app.data.Trade
+import com.tradejournal.app.data.TradeCalculations
 import com.tradejournal.app.data.TradeJournalApplication
 import com.tradejournal.app.data.TradeViewModel
+import com.tradejournal.app.data.UserSettings
+import com.tradejournal.app.data.UserSettingsStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -111,7 +115,7 @@ private fun TradeJournalTheme(content: @Composable () -> Unit) {
 }
 
 private enum class Role { USER, ADMIN }
-private enum class AppScreen { HOME, JOURNAL, ANALYSIS, ACCOUNTS, DIARY, IMPORTS, ADMIN_HOME, ADMIN_USERS, ADMIN_REPORTS }
+private enum class AppScreen { HOME, JOURNAL, ANALYSIS, ACCOUNTS, DIARY, IMPORTS, SETTINGS, ADMIN_HOME, ADMIN_USERS, ADMIN_REPORTS }
 
 // Development-only demo credential. Production must use Firebase/Auth provider claims.
 private const val DEMO_ADMIN_EMAIL = "admin@tradejournal.dev"
@@ -144,12 +148,15 @@ private fun TradeJournalApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val application = context.applicationContext as TradeJournalApplication
     val tradeViewModel: TradeViewModel = viewModel(factory = TradeViewModel.Factory(application.tradeRepository))
+    val settingsStore = remember { UserSettingsStore(context) }
+    var userSettings by remember { mutableStateOf(settingsStore.load()) }
     val trades by tradeViewModel.trades.collectAsStateWithLifecycle()
     val accounts by tradeViewModel.accounts.collectAsStateWithLifecycle()
     val diaryNotes by tradeViewModel.diaryNotes.collectAsStateWithLifecycle()
     val importRecords by tradeViewModel.importRecords.collectAsStateWithLifecycle()
     val importStatus by tradeViewModel.importStatus.collectAsStateWithLifecycle()
     var showAddTrade by remember { mutableStateOf(false) }
+    var showConnectAccount by remember { mutableStateOf(false) }
     val csvPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         val csv = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: return@rememberLauncherForActivityResult
@@ -204,9 +211,18 @@ private fun TradeJournalApp() {
                             AppScreen.HOME -> UserHome(trades, onAddTrade = { showAddTrade = true }, onOpenAnalysis = { selectScreen(AppScreen.ANALYSIS) })
                             AppScreen.JOURNAL -> JournalScreen(trades, onAddTrade = { showAddTrade = true }, onOpenImports = { selectScreen(AppScreen.IMPORTS) })
                             AppScreen.ANALYSIS -> AnalysisScreen(trades)
-                            AppScreen.ACCOUNTS -> AccountsScreen(accounts)
+                            AppScreen.ACCOUNTS -> AccountsScreen(accounts, onConnectAccount = { showConnectAccount = true })
                             AppScreen.DIARY -> DiaryScreen(diaryNotes, onSave = tradeViewModel::addDiaryNote)
                             AppScreen.IMPORTS -> ImportScreen(importRecords, importStatus, onPickCsv = { csvPicker.launch("text/*") })
+                            AppScreen.SETTINGS -> SettingsScreen(
+                                settings = userSettings,
+                                onSave = { updated ->
+                                    userSettings = updated
+                                    settingsStore.save(updated)
+                                },
+                                onConnectAccount = { showConnectAccount = true },
+                                onOpenDiary = { selectScreen(AppScreen.DIARY) },
+                            )
                             AppScreen.ADMIN_HOME -> AdminHome()
                             AppScreen.ADMIN_USERS -> AdminUsers()
                             AppScreen.ADMIN_REPORTS -> AdminReports()
@@ -222,10 +238,20 @@ private fun TradeJournalApp() {
 
     if (showAddTrade) {
         AddTradeDialog(
+            initialMarket = userSettings.defaultMarket,
             onDismiss = { showAddTrade = false },
             onSave = { trade ->
                 tradeViewModel.addTrade(trade)
                 showAddTrade = false
+            },
+        )
+    }
+    if (showConnectAccount) {
+        ConnectAccountDialog(
+            onDismiss = { showConnectAccount = false },
+            onSave = { account ->
+                tradeViewModel.addAccount(account)
+                showConnectAccount = false
             },
         )
     }
@@ -297,9 +323,10 @@ private fun SideNavigation(
             if (role == Role.USER) {
                 NavItem("⌂", "Home", AppScreen.HOME, screen, onScreenChange)
                 NavItem("▤", "Journal", AppScreen.JOURNAL, screen, onScreenChange)
-                NavItem("⇩", "Imports", AppScreen.IMPORTS, screen, onScreenChange)
                 NavItem("◔", "Analysis", AppScreen.ANALYSIS, screen, onScreenChange)
+                NavItem("⇩", "Imports", AppScreen.IMPORTS, screen, onScreenChange)
                 NavItem("◎", "Accounts", AppScreen.ACCOUNTS, screen, onScreenChange)
+                NavItem("⚙", "Settings", AppScreen.SETTINGS, screen, onScreenChange)
                 Text("IMPROVE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(top = 14.dp))
                 NavItem("✎", "Trading diary", AppScreen.DIARY, screen, onScreenChange)
             } else {
@@ -328,7 +355,7 @@ private fun BottomNavigation(role: Role, screen: AppScreen, onScreenChange: (App
                 BottomNavItem("▤", "Journal", AppScreen.JOURNAL, screen, onScreenChange)
                 TextButton(onClick = onAddTrade, modifier = Modifier.weight(1f)) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("＋", fontSize = 21.sp, color = MaterialTheme.colorScheme.primary); Text("Add", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary) } }
                 BottomNavItem("◔", "Analysis", AppScreen.ANALYSIS, screen, onScreenChange)
-                BottomNavItem("◎", "More", AppScreen.DIARY, screen, onScreenChange)
+                BottomNavItem("⚙", "Settings", AppScreen.SETTINGS, screen, onScreenChange)
             } else {
                 BottomNavItem("⌂", "Overview", AppScreen.ADMIN_HOME, screen, onScreenChange)
                 BottomNavItem("♙", "Users", AppScreen.ADMIN_USERS, screen, onScreenChange)
@@ -486,11 +513,102 @@ private fun ProgressRow(label: String, detail: String, progress: Float, positive
 private fun ProgressBar(progress: Float, positive: Boolean = false) { Box(Modifier.fillMaxWidth().height(8.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50))) { Box(Modifier.fillMaxWidth(progress).height(8.dp).background(if (positive) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary, RoundedCornerShape(50))) } }
 
 @Composable
-private fun AccountsScreen(accounts: List<Account>) {
+private fun AccountsScreen(accounts: List<Account>, onConnectAccount: () -> Unit) {
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { ScreenHeading("Accounts", "Separate live, paper, and demo performance while keeping one complete view.", "＋ Add account", {}) }
+        item { ScreenHeading("Accounts", "Connect read-only accounts and keep live, paper, and demo performance separate.", "＋ Connect account", onConnectAccount) }
         items(accounts, key = { it.id }) { account -> AccountCard(account.name, "${account.type} · ${account.broker}", "${account.currency} ${"%,.2f".format(account.equity)}", "Balance ${account.currency} ${"%,.2f".format(account.balance)}") }
-        item { Card { Column(Modifier.padding(18.dp)) { Text("Connections", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Read-only by default", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)); Spacer(Modifier.height(13.dp)); accounts.filter { it.broker != "Manual" }.forEach { Text("✓  ${it.broker} · local sync ready", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 7.dp)) }; OutlinedButton(onClick = {}, modifier = Modifier.padding(top = 13.dp)) { Text("Manage connections") } } } }
+        item {
+            Card {
+                Column(Modifier.padding(18.dp)) {
+                    Text("Connections", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("Read-only by default · credentials never belong in the journal database", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
+                    Spacer(Modifier.height(13.dp))
+                    accounts.filter { it.broker != "Manual" }.forEach { Text("✓  ${it.broker} · connection ready", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 7.dp)) }
+                    OutlinedButton(onClick = onConnectAccount, modifier = Modifier.padding(top = 13.dp)) { Text("Manage connections") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    settings: UserSettings,
+    onSave: (UserSettings) -> Unit,
+    onConnectAccount: () -> Unit,
+    onOpenDiary: () -> Unit,
+) {
+    var displayName by rememberSaveable(settings.displayName) { mutableStateOf(settings.displayName) }
+    var currency by rememberSaveable(settings.currency) { mutableStateOf(settings.currency) }
+    var defaultMarket by rememberSaveable(settings.defaultMarket) { mutableStateOf(settings.defaultMarket) }
+    var riskLimit by rememberSaveable(settings.riskLimitPercent) { mutableStateOf(settings.riskLimitPercent) }
+    var reviewReminder by rememberSaveable(settings.reviewReminder) { mutableStateOf(settings.reviewReminder) }
+    var cloudAi by rememberSaveable(settings.cloudAiEnabled) { mutableStateOf(settings.cloudAiEnabled) }
+
+    LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { ScreenHeading("Settings", "Personalize your workspace, risk defaults, privacy, and account connections.", "Save changes", onAction = { onSave(UserSettings(displayName.trim().ifBlank { "Alex" }, currency.trim().ifBlank { "USD" }.uppercase(), defaultMarket, riskLimit, reviewReminder, cloudAi)) }) }
+        item {
+            Card {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Workspace", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    OutlinedTextField(displayName, { displayName = it }, label = { Text("Display name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(currency, { currency = it }, label = { Text("Currency") }, modifier = Modifier.weight(1f), singleLine = true)
+                        OutlinedTextField(riskLimit, { riskLimit = it }, label = { Text("Risk limit %") }, modifier = Modifier.weight(1f), singleLine = true)
+                    }
+                    Text("Default market", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { listOf("Stocks", "Forex", "Crypto", "Futures", "Options").forEach { market -> FilterChip(selected = defaultMarket == market, onClick = { defaultMarket = market }, label = { Text(market, fontSize = 11.sp) }) } }
+                }
+            }
+        }
+        item {
+            Card {
+                Column(Modifier.padding(18.dp)) {
+                    Text("Privacy and review", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    SettingToggle("Daily review reminder", "Keep the end-of-session reflection habit.", reviewReminder) { reviewReminder = it }
+                    SettingToggle("Cloud AI", "Off by default. Only selected, minimized data can be shared.", cloudAi) { cloudAi = it }
+                }
+            }
+        }
+        item {
+            Card {
+                Column(Modifier.padding(18.dp)) {
+                    Text("Connected accounts", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("Add a read-only broker or manual account. Live API credentials will be handled by the secure backend integration.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                    Button(onClick = onConnectAccount, modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) { Text("Connect an account") }
+                }
+            }
+        }
+        item { OutlinedButton(onClick = onOpenDiary, modifier = Modifier.fillMaxWidth()) { Text("Open trading diary") } }
+    }
+}
+
+@Composable
+private fun SettingToggle(title: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) { Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp); Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)) }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun ConnectAccountDialog(onDismiss: () -> Unit, onSave: (Account) -> Unit) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var broker by rememberSaveable { mutableStateOf("") }
+    var type by rememberSaveable { mutableStateOf("Live") }
+    var balance by rememberSaveable { mutableStateOf("0") }
+    var currency by rememberSaveable { mutableStateOf("USD") }
+    Dialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.Top) { Column(Modifier.weight(1f)) { Text("ACCOUNT CONNECTION", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp); Text("Connect an account", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)); Text("Start with a local read-only account. Broker OAuth will be added through the backend.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)) }; IconButton(onClick = onDismiss) { Text("×", fontSize = 22.sp) } }
+                OutlinedTextField(name, { name = it }, label = { Text("Account name") }, placeholder = { Text("Main account") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(broker, { broker = it }, label = { Text("Broker or provider") }, placeholder = { Text("Interactive Brokers") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Live", "Paper", "Demo").forEach { value -> FilterChip(selected = type == value, onClick = { type = value }, label = { Text(value) }) } }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(balance, { balance = it }, label = { Text("Starting balance") }, modifier = Modifier.weight(1f), singleLine = true); OutlinedTextField(currency, { currency = it }, label = { Text("Currency") }, modifier = Modifier.weight(1f), singleLine = true) }
+                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) { TextButton(onClick = onDismiss) { Text("Cancel") }; Spacer(Modifier.width(8.dp)); Button(onClick = { onSave(Account(name = name.ifBlank { "New account" }, type = type, broker = broker.ifBlank { "Manual" }, balance = balance.toDoubleOrNull() ?: 0.0, equity = balance.toDoubleOrNull() ?: 0.0, currency = currency.ifBlank { "USD" }.uppercase())) }) { Text("Save account") } }
+            }
+        }
     }
 }
 
@@ -528,26 +646,60 @@ private fun ScreenHeading(title: String, description: String, action: String, on
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddTradeDialog(onDismiss: () -> Unit, onSave: (Trade) -> Unit) {
-    var symbol by remember { mutableStateOf("") }
-    var market by remember { mutableStateOf("Stocks") }
-    var direction by remember { mutableStateOf("Long") }
-    var setup by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
+private fun AddTradeDialog(initialMarket: String, onDismiss: () -> Unit, onSave: (Trade) -> Unit) {
+    var symbol by rememberSaveable { mutableStateOf("") }
+    var market by rememberSaveable { mutableStateOf(initialMarket) }
+    var direction by rememberSaveable { mutableStateOf("Long") }
+    var setup by rememberSaveable { mutableStateOf("") }
+    var entry by rememberSaveable { mutableStateOf("") }
+    var stopLoss by rememberSaveable { mutableStateOf("") }
+    var takeProfit by rememberSaveable { mutableStateOf("") }
+    var exit by rememberSaveable { mutableStateOf("") }
+    var quantity by rememberSaveable { mutableStateOf("1") }
+    var leverage by rememberSaveable { mutableStateOf("1") }
+    var fees by rememberSaveable { mutableStateOf("0") }
+    var riskAmount by rememberSaveable { mutableStateOf("100") }
+    var note by rememberSaveable { mutableStateOf("") }
+
+    val entryValue = entry.toDoubleOrNull() ?: 0.0
+    val stopValue = stopLoss.toDoubleOrNull() ?: 0.0
+    val targetValue = takeProfit.toDoubleOrNull() ?: 0.0
+    val exitValue = exit.toDoubleOrNull() ?: 0.0
+    val quantityValue = quantity.toDoubleOrNull() ?: 0.0
+    val leverageValue = leverage.toDoubleOrNull() ?: 1.0
+    val feesValue = fees.toDoubleOrNull() ?: 0.0
+    val riskAmountValue = riskAmount.toDoubleOrNull() ?: 0.0
+    val autoStopLoss = if (stopValue <= 0 && entryValue > 0 && quantityValue > 0 && riskAmountValue > 0) {
+        if (direction == "Short") entryValue + riskAmountValue / quantityValue else entryValue - riskAmountValue / quantityValue
+    } else 0.0
+    val effectiveStopLoss = if (stopValue > 0) stopValue else autoStopLoss
+    val preview = TradeCalculations.preview(direction, entryValue, effectiveStopLoss, targetValue, exitValue, quantityValue, leverageValue, feesValue)
+    val canSave = symbol.isNotBlank() && entryValue > 0 && quantityValue > 0
+    val pnlColor = if (preview.netPnl >= 0) MaterialTheme.colorScheme.secondary else Color(0xFFC64D5C)
+
     Dialog(onDismissRequest = onDismiss) {
         Card(shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
             LazyColumn(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { Row(verticalAlignment = Alignment.Top) { Column(Modifier.weight(1f)) { Text("NEW JOURNAL ENTRY", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp); Text("Add a trade", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)); Text("Record the decision, not only the result.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)) }; IconButton(onClick = onDismiss) { Text("×", fontSize = 22.sp) } } }
+                item { Row(verticalAlignment = Alignment.Top) { Column(Modifier.weight(1f)) { Text("NEW JOURNAL ENTRY", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp); Text("Add a trade", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp)); Text("Enter the plan and let TradeJournal calculate the outcome.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)) }; IconButton(onClick = onDismiss) { Text("×", fontSize = 22.sp) } } }
                 item { Text("Trade basics", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp) }
                 item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Stocks", "Forex", "Crypto", "Futures", "Options").forEach { type -> FilterChip(selected = market == type, onClick = { market = type }, label = { Text(type, fontSize = 11.sp) }) } } }
-                item { OutlinedTextField(value = symbol, onValueChange = { symbol = it }, label = { Text("Symbol") }, placeholder = { Text("e.g. NVDA") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { FilterChip(selected = direction == "Long", onClick = { direction = "Long" }, label = { Text("Long") }); FilterChip(selected = direction == "Short", onClick = { direction = "Short" }, label = { Text("Short") }); OutlinedTextField(value = setup, onValueChange = { setup = it }, label = { Text("Strategy / setup") }, modifier = Modifier.weight(1f), singleLine = true) } }
-                item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = result, onValueChange = { result = it }, label = { Text("P&L") }, placeholder = { Text("240.00") }, modifier = Modifier.weight(1f), singleLine = true); OutlinedTextField(value = "1.0", onValueChange = {}, label = { Text("Risk %") }, modifier = Modifier.weight(1f), singleLine = true) } }
+                item { OutlinedTextField(symbol, { symbol = it }, label = { Text("Symbol") }, placeholder = { Text("e.g. NVDA") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { FilterChip(selected = direction == "Long", onClick = { direction = "Long" }, label = { Text("Long") }); FilterChip(selected = direction == "Short", onClick = { direction = "Short" }, label = { Text("Short") }); OutlinedTextField(setup, { setup = it }, label = { Text("Strategy / setup") }, modifier = Modifier.weight(1f), singleLine = true) } }
+                item { Text("Execution and risk", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp) }
+                item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(entry, { entry = it }, label = { Text("Entry") }, placeholder = { Text("100.00") }, modifier = Modifier.weight(1f), singleLine = true); OutlinedTextField(exit, { exit = it }, label = { Text("Exit") }, placeholder = { Text("Optional") }, modifier = Modifier.weight(1f), singleLine = true) } }
+                item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(stopLoss, { stopLoss = it }, label = { Text("Stop loss") }, placeholder = { Text("Auto from risk") }, modifier = Modifier.weight(1f), singleLine = true); OutlinedTextField(takeProfit, { takeProfit = it }, label = { Text("Take profit") }, placeholder = { Text("110.00") }, modifier = Modifier.weight(1f), singleLine = true) } }
+                item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(quantity, { quantity = it }, label = { Text("Quantity") }, modifier = Modifier.weight(1f), singleLine = true); OutlinedTextField(leverage, { leverage = it }, label = { Text("Leverage") }, modifier = Modifier.weight(1f), singleLine = true); OutlinedTextField(fees, { fees = it }, label = { Text("Fees") }, modifier = Modifier.weight(1f), singleLine = true) } }
+                item { OutlinedTextField(riskAmount, { riskAmount = it }, label = { Text("Risk amount (auto SL)") }, placeholder = { Text("100.00") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                item { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) { Column(Modifier.padding(14.dp)) { Text("LIVE CALCULATIONS", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp); Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) { CalculationValue("Net P&L", "${if (preview.netPnl >= 0) "+" else "−"}$${"%.2f".format(kotlin.math.abs(preview.netPnl))}", pnlColor); CalculationValue("Stop risk", "$${"%.2f".format(preview.stopRisk)}", Color(0xFFB87416)); CalculationValue("R multiple", "${"%.2f".format(preview.rMultiple)}R", pnlColor) }; Text("Target: ${if (preview.takeProfitPnl >= 0) "+" else "−"}$${"%.2f".format(kotlin.math.abs(preview.takeProfitPnl))}  ·  ${if (stopValue > 0) "Stop entered" else "Auto SL ${"%.2f".format(effectiveStopLoss)}"}  ·  Margin: $${"%.2f".format(preview.margin)}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 10.dp)) } } }
                 item { Text("Psychology and notes", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp) }
-                item { OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("What happened and what did you learn?") }, placeholder = { Text("Explain your entry, exit, emotions, and improvement…") }, modifier = Modifier.fillMaxWidth(), minLines = 4) }
-                item { Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) { TextButton(onClick = onDismiss) { Text("Cancel") }; Spacer(Modifier.width(8.dp)); Button(onClick = { onSave(Trade(symbol = symbol.ifBlank { "NEW" }.uppercase(), market = market, direction = direction, setup = setup.ifBlank { "Unclassified" }, result = result.toDoubleOrNull() ?: 0.0, rMultiple = 1.0, status = "Needs review", note = note)) }) { Text("Save trade") } } }
+                item { OutlinedTextField(note, { note = it }, label = { Text("What happened and what did you learn?") }, placeholder = { Text("Explain your entry, exit, emotions, and improvement…") }, modifier = Modifier.fillMaxWidth(), minLines = 4) }
+                item { Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) { TextButton(onClick = onDismiss) { Text("Cancel") }; Spacer(Modifier.width(8.dp)); Button(enabled = canSave, onClick = { onSave(Trade(symbol = symbol.trim().uppercase(), market = market, direction = direction, setup = setup.ifBlank { "Unclassified" }, result = preview.netPnl, rMultiple = preview.rMultiple, status = if (exitValue > 0) "Calculated" else "Open", note = note, entryPrice = entryValue, stopLoss = effectiveStopLoss, takeProfit = targetValue, exitPrice = exitValue, quantity = quantityValue, leverage = leverageValue.coerceAtLeast(1.0), fees = feesValue)) }) { Text("Save calculated trade") } } }
             }
         }
     }
+}
+
+@Composable
+private fun CalculationValue(label: String, value: String, color: Color) {
+    Column { Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp); Text(value, color = color, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(top = 3.dp)) }
 }

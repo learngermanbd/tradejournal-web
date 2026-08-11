@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper
 class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     private companion object {
         const val DATABASE_NAME = "tradejournal.db"
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -24,6 +24,13 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
                 rMultiple REAL NOT NULL,
                 status TEXT NOT NULL,
                 note TEXT NOT NULL,
+                entryPrice REAL NOT NULL DEFAULT 0,
+                stopLoss REAL NOT NULL DEFAULT 0,
+                takeProfit REAL NOT NULL DEFAULT 0,
+                exitPrice REAL NOT NULL DEFAULT 0,
+                quantity REAL NOT NULL DEFAULT 1,
+                leverage REAL NOT NULL DEFAULT 1,
+                fees REAL NOT NULL DEFAULT 0,
                 sourceFingerprint TEXT NOT NULL DEFAULT '',
                 createdAt INTEGER NOT NULL
             )
@@ -35,6 +42,15 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) createSupportTables(db)
         if (oldVersion < 3) db.execSQL("ALTER TABLE trades ADD COLUMN sourceFingerprint TEXT NOT NULL DEFAULT ''")
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE trades ADD COLUMN entryPrice REAL NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE trades ADD COLUMN stopLoss REAL NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE trades ADD COLUMN takeProfit REAL NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE trades ADD COLUMN exitPrice REAL NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE trades ADD COLUMN quantity REAL NOT NULL DEFAULT 1")
+            db.execSQL("ALTER TABLE trades ADD COLUMN leverage REAL NOT NULL DEFAULT 1")
+            db.execSQL("ALTER TABLE trades ADD COLUMN fees REAL NOT NULL DEFAULT 0")
+        }
     }
 
     private fun createSupportTables(db: SQLiteDatabase) {
@@ -99,6 +115,13 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
             val rMultiple = cursor.getColumnIndexOrThrow("rMultiple")
             val status = cursor.getColumnIndexOrThrow("status")
             val note = cursor.getColumnIndexOrThrow("note")
+            val entryPrice = cursor.getColumnIndexOrThrow("entryPrice")
+            val stopLoss = cursor.getColumnIndexOrThrow("stopLoss")
+            val takeProfit = cursor.getColumnIndexOrThrow("takeProfit")
+            val exitPrice = cursor.getColumnIndexOrThrow("exitPrice")
+            val quantity = cursor.getColumnIndexOrThrow("quantity")
+            val leverage = cursor.getColumnIndexOrThrow("leverage")
+            val fees = cursor.getColumnIndexOrThrow("fees")
             val sourceFingerprint = cursor.getColumnIndexOrThrow("sourceFingerprint")
             val createdAt = cursor.getColumnIndexOrThrow("createdAt")
             while (cursor.moveToNext()) {
@@ -113,6 +136,13 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
                         rMultiple = cursor.getDouble(rMultiple),
                         status = cursor.getString(status),
                         note = cursor.getString(note),
+                        entryPrice = cursor.getDouble(entryPrice),
+                        stopLoss = cursor.getDouble(stopLoss),
+                        takeProfit = cursor.getDouble(takeProfit),
+                        exitPrice = cursor.getDouble(exitPrice),
+                        quantity = cursor.getDouble(quantity),
+                        leverage = cursor.getDouble(leverage),
+                        fees = cursor.getDouble(fees),
                         sourceFingerprint = cursor.getString(sourceFingerprint),
                         createdAt = cursor.getLong(createdAt),
                     ),
@@ -246,6 +276,13 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
             put("rMultiple", trade.rMultiple)
             put("status", trade.status)
             put("note", trade.note)
+            put("entryPrice", trade.entryPrice)
+            put("stopLoss", trade.stopLoss)
+            put("takeProfit", trade.takeProfit)
+            put("exitPrice", trade.exitPrice)
+            put("quantity", trade.quantity)
+            put("leverage", trade.leverage)
+            put("fees", trade.fees)
             put("sourceFingerprint", trade.sourceFingerprint)
             put("createdAt", trade.createdAt)
         }

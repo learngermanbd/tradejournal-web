@@ -53,6 +53,13 @@ class TradeViewModel(private val repository: TradeRepository) : ViewModel() {
         }
     }
 
+    fun addAccount(account: Account) {
+        viewModelScope.launch {
+            repository.addAccount(account)
+            _accounts.value = repository.loadAccounts()
+        }
+    }
+
     fun seedDiaryNotesIfEmpty(seed: List<DiaryNote>) {
         viewModelScope.launch {
             repository.seedDiaryNotesIfEmpty(seed)

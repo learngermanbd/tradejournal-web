@@ -35,6 +35,8 @@ class TradeRepository(private val store: TradeStore) {
         if (store.readAccounts().isEmpty()) seed.forEach(store::insertAccount)
     }
 
+    suspend fun addAccount(account: Account) = withContext(Dispatchers.IO) { store.insertAccount(account) }
+
     suspend fun loadDiaryNotes(): List<DiaryNote> = withContext(Dispatchers.IO) { store.readDiaryNotes() }
 
     suspend fun seedDiaryNotesIfEmpty(seed: List<DiaryNote>) = withContext(Dispatchers.IO) {
