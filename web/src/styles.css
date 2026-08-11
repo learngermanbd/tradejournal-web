@@ -80,7 +80,7 @@ button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset
 .account-chip strong { font-size: 11px; }
 .account-chip small { color: var(--muted); font-size: 9px; margin-top: 2px; }
 .main { min-width: 0; flex: 1; padding: 30px 44px 55px; }
-.topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; max-width: 1260px; margin: 0 auto; }
+.topbar { position: sticky; top: 0; z-index: 8; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; max-width: 1260px; margin: 0 auto; padding: 10px 0; background: color-mix(in srgb, var(--soft) 88%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 .eyebrow { color: var(--brand); text-transform: uppercase; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; }
 .heading h1 { margin: 7px 0 0; color: var(--ink); font-size: 27px; letter-spacing: -.8px; }
 .top-actions { display: flex; align-items: center; gap: 9px; }
