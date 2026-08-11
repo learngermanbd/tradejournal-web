@@ -1,4 +1,10 @@
-# Android / Gradle
+# Web / Node
+node_modules/
+dist/
+.wrangler/
+.vercel/
+
+# Android / Gradle (legacy prototype artifacts)
 .gradle/
 **/build/
 local.properties
