@@ -10,6 +10,15 @@ Run locally with `npm install`, then `npm run dev`. The public home is `/`; the 
 
 For account providers, configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, enable Google/Apple/Azure/GitHub in Supabase Auth, and set `VITE_TELEGRAM_AUTH_URL` only after deploying a verified Telegram bot authorization endpoint. Never put service-role keys or bot secrets in browser environment variables.
 
+The local Vite development login also shows two demo buttons:
+
+```text
+Demo user:  demo.user@journaledge.local / DemoUser123!
+Demo admin: demo.admin@journaledge.local / DemoAdmin123!
+```
+
+These are in-memory development sessions only, hidden from production builds, and cannot write to Supabase or R2.
+
 ## Product direction
 
 The web app must work well on phones, tablets, laptops, and large monitors. It should be installable as a PWA and remain reachable online, while only caching the app shell and temporary request state in the browser.

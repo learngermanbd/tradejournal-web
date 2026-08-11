@@ -24,6 +24,19 @@ export async function signIn(email: string, password: string): Promise<AuthSessi
   return { accessToken: body.access_token, refreshToken: body.refresh_token, user: body.user }
 }
 
+export function demoSignIn(role: 'user' | 'admin'): AuthSession {
+  const isAdmin = role === 'admin'
+  return {
+    accessToken: `demo-${role}-access-token`,
+    refreshToken: `demo-${role}-refresh-token`,
+    user: {
+      id: `demo-${role}-user`,
+      email: isAdmin ? 'demo.admin@journaledge.local' : 'demo.user@journaledge.local',
+      user_metadata: { role, demo: true },
+    },
+  }
+}
+
 export async function signUp(email: string, password: string): Promise<{ needsConfirmation: boolean }> {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('Supabase environment variables are not configured.')
   const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {

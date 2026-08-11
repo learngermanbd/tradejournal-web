@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { adminMetrics, userMetrics } from './dashboardData'
 import { ApiError, getQuote, saveTrade } from './api'
-import { getOAuthSession, signIn, signUp, startOAuth, type AuthSession, type OAuthProvider } from './auth'
+import { demoSignIn, getOAuthSession, signIn, signUp, startOAuth, type AuthSession, type OAuthProvider } from './auth'
 import { previewTrade, type TradeInput, type TradeMarket, type TradeSide } from './trade'
 
 type Area = 'user' | 'admin'
@@ -40,7 +40,7 @@ function App() {
   const [showTradeForm, setShowTradeForm] = useState(false)
   const [session, setSession] = useState<AuthSession | null>(() => getOAuthSession())
 
-  if (getRoute() === 'login' && !session) return <LoginScreen onSignedIn={setSession} />
+  if (getRoute() === 'login' && !session) return <LoginScreen onSignedIn={(nextSession) => { setSession(nextSession); if (nextSession.user.user_metadata?.role === 'admin') setArea('admin') }} />
 
   const title = useMemo(() => area === 'admin' ? 'Admin control center' : 'Good morning, Alex', [area])
 
@@ -104,13 +104,20 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AuthSession) => voi
     }
   }
 
+  function handleDemo(role: 'user' | 'admin') {
+    onSignedIn(demoSignIn(role))
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     setBusy(true)
     setMessage('')
     try {
-      if (mode === 'signin') onSignedIn(await signIn(email, password))
-      else {
+      if (mode === 'signin') {
+        if (import.meta.env.DEV && email === 'demo.user@journaledge.local' && password === 'DemoUser123!') return onSignedIn(demoSignIn('user'))
+        if (import.meta.env.DEV && email === 'demo.admin@journaledge.local' && password === 'DemoAdmin123!') return onSignedIn(demoSignIn('admin'))
+        onSignedIn(await signIn(email, password))
+      } else {
         const result = await signUp(email, password)
         setMessage(result.needsConfirmation ? 'Check your email to confirm your account, then sign in.' : 'Account created. You can now sign in.')
         setMode('signin')
@@ -122,7 +129,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AuthSession) => voi
     }
   }
 
-  return <main className="auth-page"><div className="auth-card"><Brand /><span className="eyebrow">Secure cloud access</span><h1>{mode === 'signin' ? 'Welcome back' : 'Create your journal'}</h1><p>Trade records are stored in your encrypted cloud vault, not in browser storage.</p><div className="social-grid"><button className="social-button" onClick={() => handleOAuth('google')}><b>G</b> Google</button><button className="social-button" onClick={() => handleOAuth('apple')}><b>●</b> Apple</button><button className="social-button" onClick={() => handleOAuth('azure')}><b>▦</b> Microsoft</button><button className="social-button" onClick={() => handleOAuth('github')}><b>◆</b> GitHub</button><button className="social-button telegram" onClick={() => handleOAuth('telegram')}><b>➤</b> Telegram</button></div>{providerMessage && <div className="form-status provider-status">{providerMessage}</div>}<div className="auth-divider"><span>or use email</span></div><form onSubmit={submit}><label>Email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label><label>Password<input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" /></label>{message && <div className="form-status">{message}</div>}<button className="primary-button auth-submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in securely' : 'Create account'}</button></form><button className="auth-switch" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>{mode === 'signin' ? 'Need an account? Create one' : 'Already registered? Sign in'}</button><small className="provider-note">Google, Apple, Microsoft, and GitHub use Supabase OAuth. Telegram needs a verified bot authorization URL configured in the Worker environment.</small></div></main>
+  return <main className="auth-page"><div className="auth-card"><Brand /><span className="eyebrow">Secure cloud access</span><h1>{mode === 'signin' ? 'Welcome back' : 'Create your journal'}</h1><p>Trade records are stored in your encrypted cloud vault, not in browser storage.</p><div className="social-grid"><button className="social-button" onClick={() => handleOAuth('google')}><b>G</b> Google</button><button className="social-button" onClick={() => handleOAuth('apple')}><b>●</b> Apple</button><button className="social-button" onClick={() => handleOAuth('azure')}><b>▦</b> Microsoft</button><button className="social-button" onClick={() => handleOAuth('github')}><b>◆</b> GitHub</button><button className="social-button telegram" onClick={() => handleOAuth('telegram')}><b>➤</b> Telegram</button></div>{providerMessage && <div className="form-status provider-status">{providerMessage}</div>}{import.meta.env.DEV && <div className="demo-login"><strong>Local demo access</strong><div><button className="demo-button" onClick={() => handleDemo('user')}>Demo user</button><button className="demo-button admin" onClick={() => handleDemo('admin')}>Demo admin</button></div><small>Development only · cloud writes are disabled for demo sessions.</small></div>}<div className="auth-divider"><span>or use email</span></div><form onSubmit={submit}><label>Email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label><label>Password<input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" /></label>{message && <div className="form-status">{message}</div>}<button className="primary-button auth-submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in securely' : 'Create account'}</button></form><button className="auth-switch" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>{mode === 'signin' ? 'Need an account? Create one' : 'Already registered? Sign in'}</button><small className="provider-note">Google, Apple, Microsoft, and GitHub use Supabase OAuth. Telegram needs a verified bot authorization URL configured in the Worker environment.</small></div></main>
 }
 
 function Brand() {

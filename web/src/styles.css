@@ -35,6 +35,14 @@ button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset
 .social-button b { width: 16px; color: var(--brand); font-size: 13px; }
 .social-button.telegram { grid-column: 1 / -1; color: #168bc4; }
 .social-button.telegram b { color: #168bc4; }
+.demo-login { display: grid; gap: 8px; margin-top: 16px; padding: 12px; border: 1px dashed #aeb9ef; border-radius: 9px; background: var(--blue-soft); }
+.demo-login strong { color: var(--brand); font-size: 10px; }
+.demo-login > div { display: flex; gap: 7px; }
+.demo-button { flex: 1; padding: 8px 5px; border: 1px solid #aeb9ef; border-radius: 7px; color: var(--brand); background: var(--surface); font-size: 10px; font-weight: 750; }
+.demo-button:hover { background: var(--brand); color: #fff; }
+.demo-button.admin { color: var(--orange); border-color: #e9c48e; }
+.demo-button.admin:hover { color: #fff; background: var(--orange); }
+.demo-login small { color: var(--muted); font-size: 9px; line-height: 1.4; }
 .auth-divider { display: flex; align-items: center; gap: 10px; margin: 19px 0 14px; color: var(--muted); font-size: 9px; text-align: center; }
 .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .auth-card form { display: grid; gap: 14px; }
