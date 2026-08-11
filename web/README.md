@@ -1,12 +1,12 @@
 # TradeJournal Web / PWA
 
-TradeJournal is moving from an Android-first prototype to a responsive web application and installable Progressive Web App. The existing HTML prototypes remain in the repository as product and visual references. Open `preview-all-pages.html` directly to inspect the interactive marketing, user, community, market, and admin page map without starting the React app.
+TradeJournal is moving from an Android-first prototype to a responsive web application and installable Progressive Web App. The existing HTML prototypes remain in the repository as product and visual references. Open `preview-all-pages.html` directly to inspect the interactive marketing, user, market, and admin page map without starting the React app.
 
 ## Current implementation
 
-The first web foundation is now scaffolded in `src/`: a responsive user dashboard, market workspace, separate community dashboard, protected admin dashboard shell, role-aware navigation, theme toggle, mobile layout, PWA app-shell registration, and a trade-entry form with live P&L/risk preview. `src/api.ts` defines the typed Worker API client; configure `VITE_API_BASE_URL` and a real Supabase session before enabling cloud writes. Private journal data is never treated as browser storage.
+The public marketing page is the default home page at `/` and `/marketing.html`. The authenticated React app is available at `/app.html`; its responsive user dashboard includes market, journal, imports, analysis, accounts, diary, reports, settings, and ROI-aware trade entry. The admin shell is protected behind the app entrypoint and backend role checks. `src/api.ts` defines the typed Worker API client; configure `VITE_API_BASE_URL` and a real Supabase session before enabling cloud writes. Community has been removed from the active site. Private journal data is never treated as browser storage.
 
-Run locally with `npm install`, then `npm run dev`. Validate with `npm run typecheck` and `npm run build`.
+Run locally with `npm install`, then `npm run dev`. The public home is `/`; the authenticated app is `/app.html`; the all-pages preview is `/preview-all-pages.html`. Validate with `npm run typecheck` and `npm run build`.
 
 ## Product direction
 
@@ -37,15 +37,12 @@ The backend stores only control-plane metadata. Admins can see aggregate operati
 ## Public domain layout
 
 ```text
-https://learngermanwith.fun/          marketing website
+https://learngermanwith.fun/          marketing website and home page
 https://app.learngermanwith.fun/      user application
-https://community.learngermanwith.fun/ community application
 https://admin.learngermanwith.fun/    protected admin application
 ```
 
-The community application shares authentication and branding with the user app but has separate navigation, moderation controls, sharing permissions, community data boundaries, and public-only monetization. See `SEO-CRAWL-POLICY.md` and `COMMUNITY-MONETIZATION.md` for indexing and advertising rules.
-
-Only the marketing website and intentionally published community content may be indexed by Google. The user app, admin panel, authenticated community pages, private groups, messages, drafts, and account routes must use noindex protection and never appear in sitemaps.
+Only the public marketing website may be indexed by Google. The user app, admin panel, preview, drafts, and account routes use noindex protection and never appear in sitemaps.
 
 ## Planned application routes
 
@@ -59,7 +56,6 @@ Only the marketing website and intentionally published community content may be 
 /accounts
 /diary
 /settings
-/community                # separate community domain/application
 /admin                    # route is unavailable to normal users
 /admin/users
 /admin/reports

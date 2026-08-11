@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
-import { adminMetrics, communityStats, userMetrics } from './dashboardData'
+import { adminMetrics, userMetrics } from './dashboardData'
 import { ApiError, getQuote, saveTrade } from './api'
 import { signIn, signUp, type AuthSession } from './auth'
 import { previewTrade, type TradeInput, type TradeMarket, type TradeSide } from './trade'
 
-type Area = 'user' | 'community' | 'admin'
+type Area = 'user' | 'admin'
 type UserView = 'overview' | 'journal' | 'imports' | 'analysis' | 'market' | 'accounts' | 'diary' | 'reports' | 'settings'
-type CommunityView = 'overview' | 'discover' | 'groups' | 'members' | 'post' | 'sharing' | 'guidelines'
-type AdminView = 'overview' | 'users' | 'features' | 'content' | 'integrations' | 'billing' | 'community' | 'operations' | 'audit'
+type AdminView = 'overview' | 'users' | 'features' | 'content' | 'integrations' | 'billing' | 'operations' | 'audit'
 
 const userNav: Array<[UserView, string, string]> = [
   ['overview', 'Overview', '⌂'],
@@ -21,16 +20,6 @@ const userNav: Array<[UserView, string, string]> = [
   ['settings', 'Settings', '⚙'],
 ]
 
-const communityNav: Array<[CommunityView, string, string]> = [
-  ['overview', 'Overview', '⌂'],
-  ['discover', 'Discover', '◉'],
-  ['groups', 'Groups', '♧'],
-  ['members', 'Members', '♙'],
-  ['post', 'New post', '＋'],
-  ['sharing', 'Sharing', '↗'],
-  ['guidelines', 'Guidelines', '✓'],
-]
-
 const adminNav: Array<[AdminView, string, string]> = [
   ['overview', 'Overview', '⌂'],
   ['users', 'Users', '♙'],
@@ -38,7 +27,6 @@ const adminNav: Array<[AdminView, string, string]> = [
   ['content', 'Content CMS', '▣'],
   ['integrations', 'Providers', '⌁'],
   ['billing', 'Billing', '$'],
-  ['community', 'Community', '◉'],
   ['operations', 'Operations', '▥'],
   ['audit', 'Audit & security', '≡'],
 ]
@@ -47,24 +35,18 @@ function App() {
   const initialArea = getAreaFromPath()
   const [area, setArea] = useState<Area>(initialArea)
   const [userView, setUserView] = useState<UserView>('overview')
-  const [communityView, setCommunityView] = useState<CommunityView>('overview')
   const [adminView, setAdminView] = useState<AdminView>('overview')
   const [dark, setDark] = useState(false)
   const [showTradeForm, setShowTradeForm] = useState(false)
   const [session, setSession] = useState<AuthSession | null>(null)
 
-  if (window.location.pathname.startsWith('/login') && !session) return <LoginScreen onSignedIn={setSession} />
+  if (getRoute() === 'login' && !session) return <LoginScreen onSignedIn={setSession} />
 
-  const title = useMemo(() => {
-    if (area === 'admin') return 'Admin control center'
-    if (area === 'community') return 'Community workspace'
-    return 'Good morning, Alex'
-  }, [area])
+  const title = useMemo(() => area === 'admin' ? 'Admin control center' : 'Good morning, Alex', [area])
 
   function changeArea(next: Area) {
     setArea(next)
     if (next === 'admin') setAdminView('overview')
-    if (next === 'community') setCommunityView('overview')
     if (next === 'user') setUserView('overview')
   }
 
@@ -74,14 +56,13 @@ function App() {
         <Brand />
         <div className="area-switcher" aria-label="Application area">
           <button className={area === 'user' ? 'area active' : 'area'} onClick={() => changeArea('user')}>User app</button>
-          <button className={area === 'community' ? 'area active' : 'area'} onClick={() => changeArea('community')}>Community</button>
           {area === 'admin' && <button className="area active" onClick={() => changeArea('admin')}>Admin</button>}
         </div>
         <nav className="nav" aria-label="Primary navigation">
-          <span className="nav-label">{area === 'admin' ? 'CONTROL CENTER' : area === 'community' ? 'COMMUNITY' : 'WORKSPACE'}</span>
-          {(area === 'admin' ? adminNav : area === 'community' ? communityNav : userNav).map(([key, label, icon]) => {
-            const selected = area === 'admin' ? adminView === key : area === 'community' ? communityView === key : userView === key
-            return <button key={key} className={selected ? 'nav-item active' : 'nav-item'} onClick={() => selectView(area, key, setUserView, setCommunityView, setAdminView)}><span>{icon}</span>{label}</button>
+          <span className="nav-label">{area === 'admin' ? 'CONTROL CENTER' : 'WORKSPACE'}</span>
+          {(area === 'admin' ? adminNav : userNav).map(([key, label, icon]) => {
+            const selected = area === 'admin' ? adminView === key : userView === key
+            return <button key={key} className={selected ? 'nav-item active' : 'nav-item'} onClick={() => selectView(area, key, setUserView, setAdminView)}><span>{icon}</span>{label}</button>
           })}
           {area !== 'admin' && <>
             <span className="nav-label improve">IMPROVE</span>
@@ -89,7 +70,6 @@ function App() {
           </>}
         </nav>
         <div className="sidebar-bottom">
-          {area === 'community' && <div className="ad-note"><strong>Community monetization</strong><span>Public contextual ads only. Private areas stay ad-free.</span></div>}
           <div className="privacy-note"><strong>Cloud-first & encrypted</strong><span>Saved data is protected by Worker API and R2 vaults.</span></div>
           <div className="account-chip"><span className="avatar">{session ? (session.user.email?.slice(0, 2).toUpperCase() ?? 'AK') : 'AK'}</span><span><strong>{session?.user.email ?? 'Alex Kim'}</strong><small>{area === 'admin' ? 'Super admin' : session ? 'Cloud session active' : 'Demo workspace'}</small></span></div>
         </div>
@@ -98,10 +78,10 @@ function App() {
       <main className="main">
         <header className="topbar">
           <div className="heading"><span className="eyebrow">JournalEdge SaaS</span><h1>{title}</h1></div>
-          <div className="top-actions"><span className="domain-pill">{area === 'admin' ? 'admin.' : area === 'community' ? 'community.' : 'app.'}learngermanwith.fun</span><button className="icon-button" aria-label="Toggle theme" onClick={() => setDark(!dark)}>{dark ? '☀' : '◐'}</button><button className="icon-button" aria-label="Notifications">♢</button>{area === 'user' && <button className="primary-button" onClick={() => setShowTradeForm(true)}>＋ Add trade</button>}</div>
+          <div className="top-actions"><span className="domain-pill">{area === 'admin' ? 'admin.' : 'app.'}learngermanwith.fun</span><button className="icon-button" aria-label="Toggle theme" onClick={() => setDark(!dark)}>{dark ? '☀' : '◐'}</button><button className="icon-button" aria-label="Notifications">♢</button>{area === 'user' && <button className="primary-button" onClick={() => setShowTradeForm(true)}>＋ Add trade</button>}</div>
         </header>
 
-        {area === 'admin' ? <AdminDashboard view={adminView} /> : area === 'community' ? <CommunityDashboard view={communityView} /> : <UserDashboard view={userView} onAddTrade={() => setShowTradeForm(true)} />}
+        {area === 'admin' ? <AdminDashboard view={adminView} /> : <UserDashboard view={userView} onAddTrade={() => setShowTradeForm(true)} />}
       </main>
       {showTradeForm && <TradeForm accessToken={session?.accessToken} onClose={() => setShowTradeForm(false)} onSaved={() => setShowTradeForm(false)} />}
     </div>
@@ -207,26 +187,15 @@ function TradeForm({ accessToken, onClose, onSaved }: { accessToken?: string; on
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="trade-modal" role="dialog" aria-modal="true" aria-labelledby="trade-form-title"><div className="modal-heading"><div><span className="eyebrow">Cloud journal</span><h2 id="trade-form-title">Add trade</h2></div><button className="icon-button" onClick={onClose} aria-label="Close trade form">×</button></div><form onSubmit={submit}><div className="form-grid"><label>Symbol<input value={form.symbol} onChange={(event) => setField('symbol', event.target.value)} placeholder="NVDA" /></label><label>Market<select value={form.market} onChange={(event) => setField('market', event.target.value as TradeMarket)}><option value="stocks">Stocks</option><option value="crypto">Crypto</option><option value="forex">Forex</option><option value="futures">Futures</option><option value="options">Options</option></select></label><label>Direction<select value={form.side} onChange={(event) => setField('side', event.target.value as TradeSide)}><option value="long">Long</option><option value="short">Short</option></select></label><label>Quantity<input type="number" min="0" step="any" value={form.quantity || ''} onChange={numberField('quantity')} /></label><label>Entry price<input type="number" min="0" step="any" value={form.entryPrice || ''} onChange={numberField('entryPrice')} /></label><label>Exit price<input type="number" min="0" step="any" value={form.exitPrice ?? ''} onChange={numberField('exitPrice')} /></label><label>Stop loss<input type="number" min="0" step="any" value={form.stopLoss ?? ''} onChange={numberField('stopLoss')} /></label><label>Take profit<input type="number" min="0" step="any" value={form.takeProfit ?? ''} onChange={numberField('takeProfit')} /></label><label>Leverage<input type="number" min="0.01" step="any" value={form.leverage ?? ''} onChange={numberField('leverage')} /></label></div><div className="trade-preview"><span>Live calculation</span><strong className={preview.pnl === undefined ? '' : preview.pnl >= 0 ? 'positive' : 'negative'}>{preview.pnl === undefined ? 'Open trade' : `${preview.pnl >= 0 ? '+' : ''}$${preview.pnl.toFixed(2)}`}</strong><small>ROI {preview.roiPercent === undefined ? '—' : `${preview.roiPercent >= 0 ? '+' : ''}${preview.roiPercent.toFixed(2)}%`} · Risk {preview.risk === undefined ? '—' : `$${preview.risk.toFixed(2)}`} · Reward {preview.reward === undefined ? '—' : `$${preview.reward.toFixed(2)}`} · R {preview.rMultiple === undefined ? '—' : preview.rMultiple.toFixed(2)}</small></div><label className="wide-field">Notes<textarea value={form.notes} onChange={(event) => setField('notes', event.target.value)} placeholder="Why did you take this trade?" rows={3} /></label>{status && <p className="form-status">{status}</p>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">Validate trade</button></div></form></section></div>
 }
 
-function CommunityDashboard({ view }: { view: CommunityView }) {
-  if (view === 'discover') return <Workspace title="Discover" description="Explore public strategies, education, and conversations." action="Search community"><BarChart title="Trending public topics" rows={['Risk management · 2.4k views', 'Options playbooks · 1.8k views', 'Trading psychology · 1.2k views', 'Market review · 940 views']} /></Workspace>
-  if (view === 'groups') return <Workspace title="Groups" description="Find private, public, and mentor-led spaces." action="＋ Create group"><DataTable rows={['Risk discipline challenge · Public · 184 members', 'Options Lab · Private · 42 members', 'Coach workspace · Invite-only · 8 members']} /></Workspace>
-  if (view === 'members') return <Workspace title="Members" description="Connect with traders while keeping sharing permission-based." action="Invite a mentor"><DataTable rows={['Avery Chen · Coach · Public profile', 'Maya Singh · Options trader · Public profile', 'Jordan Lee · Member · Follows you']} /></Workspace>
-  if (view === 'post') return <Workspace title="New public post" description="Choose public, group, or private visibility before sharing." action="Publish post"><SettingsCard /></Workspace>
-  if (view === 'sharing') return <Workspace title="Sharing center" description="Review access, expiration, view history, watermarks, and revoke controls." action="Review access log"><DataTable rows={['Coach workspace · Trades view-only · 14 days', 'Risk group · Strategy comment access', 'Public profile · Bio only · No journal data']} /></Workspace>
-  if (view === 'guidelines') return <Workspace title="Guidelines" description="A focused, respectful community for better process—not financial advice." action="Read full policy"><Card title="Community safety"><div className="privacy-large"><strong>Private by default.</strong><span>Public posts are indexable only when the author chooses. Trades, P&L, psychology, messages, and private groups remain uncrawlable and ad-free.</span></div></Card></Workspace>
-  return <Workspace title="Community" description="Learn, share, and sharpen your edge with other traders." action="＋ New public post"><MetricGrid metrics={communityStats} /><div className="content-grid"><Card title="Public community activity"><div className="activity-list"><Activity title="Options playbook" detail="Public education · 2.4k views" /><Activity title="Risk discipline challenge" detail="Public group · 184 participants" /><Activity title="Market psychology AMA" detail="Sponsored education · clearly labeled" /></div></Card><Card title="Community monetization"><div className="revenue"><strong>$2,480</strong><span>Public contextual ad revenue this month</span><div className="progress"><i style={{ width: '68%' }} /></div><small>68% of monthly target · private spaces remain ad-free</small></div></Card></div><DataTable rows={['Public strategy library · Indexed by Google', 'Trading psychology discussion · Public', 'Private mentor workspace · Members only']} /></Workspace>
-}
-
 function AdminDashboard({ view }: { view: AdminView }) {
   if (view === 'users') return <Workspace title="Users" description="Manage account metadata without exposing private journals." action="Invite admin"><DataTable rows={['Alex Kim · Premium · Active', 'Maya Singh · Free · Active', 'Jordan Lee · Trial · Review']} /></Workspace>
-  if (view === 'features') return <Workspace title="Features and plans" description="Control free, premium, community, ads, and rollout entitlements." action="＋ Add feature"><FeatureTable /></Workspace>
+  if (view === 'features') return <Workspace title="Features and plans" description="Control free, premium, billing, and rollout entitlements." action="＋ Add feature"><FeatureTable /></Workspace>
   if (view === 'content') return <Workspace title="Content CMS" description="Manage help, education, legal, onboarding, announcements, and translations." action="＋ New content"><DataTable rows={['Getting started guide · Published · 8 languages', 'Options education · Draft · Needs review', 'Privacy policy v3 · Published · Consent active']} /></Workspace>
   if (view === 'integrations') return <Workspace title="Providers" description="Manage market data, brokers, email, payments, AI, calendars, and storage." action="＋ Add provider"><DataTable rows={['Cloudflare R2 · Primary vault · Healthy', 'Market data · Manual fallback · No key configured', 'Transactional email · Healthy · Test delivery']} /></Workspace>
   if (view === 'billing') return <Workspace title="Billing" description="Manage plans, invoices, refunds, retries, taxes, coupons, and webhooks." action="＋ Create plan"><MetricGrid metrics={[{ label: 'MRR', value: '$18,240', detail: '+9.2%', tone: 'positive' }, { label: 'Premium users', value: '214', detail: '8.7% conversion', tone: 'blue' }, { label: 'Failed payments', value: '7', detail: 'Retry queue', tone: 'warning' }, { label: 'Refunds', value: '$420', detail: 'This month', tone: 'warning' }]} /></Workspace>
-  if (view === 'community') return <Workspace title="Community moderation" description="Protect public content, contextual ads, indexing, reports, and private spaces." action="Open moderation queue"><DataTable rows={['Reports queue · 14 reports · 3 need review', 'Public ad consent · 96% coverage', 'Sponsored content · 2 awaiting disclosure']} /></Workspace>
-  if (view === 'operations') return <Workspace title="Operations" description="Monitor services, storage, monetization, and incidents." action="Open status page"><BarChart title="Service health" rows={['Cloudflare Workers · Operational', 'Cloudflare R2 · Operational', 'Supabase Auth · Operational', 'Community ads · Consent healthy']} /></Workspace>
+  if (view === 'operations') return <Workspace title="Operations" description="Monitor services, storage, monetization, and incidents." action="Open status page"><BarChart title="Service health" rows={['Cloudflare Workers · Operational', 'Cloudflare R2 · Operational', 'Supabase Auth · Operational', 'Platform services · Operational']} /></Workspace>
   if (view === 'audit') return <Workspace title="Audit & security" description="Review security events, admin changes, consent, support access, and retention." action="Export audit log"><DataTable rows={['Role changed · Billing admin added · 2 minutes ago', 'Feature changed · AI paused · 1 hour ago', 'Support access · Expired · Yesterday']} /></Workspace>
-  return <Workspace title="Admin overview" description="Aggregate operations for JournalEdge services." action="Export report"><MetricGrid metrics={adminMetrics} /><div className="content-grid"><Card title="Service health"><Activity title="Cloudflare R2 vaults" detail="Operational · 99.98% availability" /><Activity title="Community monetization" detail="Contextual ads only · 96% consent coverage" /><Activity title="Auth and roles" detail="Operational · no open security incident" /></Card><Card title="Privacy boundary"><div className="privacy-large"><strong>Private content is excluded.</strong><span>Admin dashboards receive aggregate metrics, billing metadata, service events, and audit records—not private trades, notes, or psychology.</span></div></Card></div></Workspace>
+  return <Workspace title="Admin overview" description="Aggregate operations for JournalEdge services." action="Export report"><MetricGrid metrics={adminMetrics} /><div className="content-grid"><Card title="Service health"><Activity title="Cloudflare R2 vaults" detail="Operational · 99.98% availability" /><Activity title="Subscription operations" detail="Billing webhooks healthy · 96% event coverage" /><Activity title="Auth and roles" detail="Operational · no open security incident" /></Card><Card title="Privacy boundary"><div className="privacy-large"><strong>Private content is excluded.</strong><span>Admin dashboards receive aggregate metrics, billing metadata, service events, and audit records—not private trades, notes, or psychology.</span></div></Card></div></Workspace>
 }
 
 function Workspace({ title, description, action, onAction, children }: { title: string; description: string; action: string; onAction?: () => void; children: React.ReactNode }) {
@@ -266,19 +235,23 @@ function SettingsCard() {
 }
 
 function FeatureTable() {
-  return <div className="data-table"><div className="data-row"><strong>Options strategy builder</strong><span className="tag">Premium</span><button className="select">Edit</button></div><div className="data-row"><strong>Public community ads</strong><span className="tag green">Free</span><button className="select">Edit</button></div><div className="data-row"><strong>Ad-free community</strong><span className="tag">Premium</span><button className="select">Edit</button></div><div className="data-row"><strong>Cloud R2 journal</strong><span className="tag green">All plans</span><button className="select">Edit</button></div></div>
+  return <div className="data-table"><div className="data-row"><strong>Options strategy builder</strong><span className="tag">Premium</span><button className="select">Edit</button></div><div className="data-row"><strong>Advanced ROI analytics</strong><span className="tag green">All plans</span><button className="select">Edit</button></div><div className="data-row"><strong>Cloud R2 journal</strong><span className="tag green">All plans</span><button className="select">Edit</button></div><div className="data-row"><strong>Cloud AI insights</strong><span className="tag">Premium</span><button className="select">Edit</button></div></div>
 }
 
-function selectView(area: Area, key: string, setUserView: (view: UserView) => void, setCommunityView: (view: CommunityView) => void, setAdminView: (view: AdminView) => void) {
+function selectView(area: Area, key: string, setUserView: (view: UserView) => void, setAdminView: (view: AdminView) => void) {
   if (area === 'admin') setAdminView(key as AdminView)
-  else if (area === 'community') setCommunityView(key as CommunityView)
   else setUserView(key as UserView)
 }
 
 function getAreaFromPath(): Area {
-  if (window.location.pathname.startsWith('/admin')) return 'admin'
-  if (window.location.pathname.startsWith('/community')) return 'community'
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('area') === 'admin' || window.location.pathname.startsWith('/admin')) return 'admin'
   return 'user'
+}
+
+function getRoute() {
+  const params = new URLSearchParams(window.location.search)
+  return params.get('route') ?? (window.location.pathname.startsWith('/login') ? 'login' : '')
 }
 
 export default App

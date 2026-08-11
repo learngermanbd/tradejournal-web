@@ -1,4 +1,4 @@
-export type AppArea = 'user' | 'community' | 'admin'
+export type AppArea = 'user' | 'admin'
 export type UserRole = 'user' | 'admin' | 'support' | 'analyst' | 'billing' | 'content'
 
 export interface CloudSession {

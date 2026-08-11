@@ -5,13 +5,6 @@ export const userMetrics = [
   { label: 'Max drawdown', value: '−3.2%', detail: 'Within 5% limit', tone: 'warning' },
 ] as const
 
-export const communityStats = [
-  { label: 'Public posts', value: '12.8k', detail: '+18% this month', tone: 'blue' },
-  { label: 'Active members', value: '4,820', detail: 'Across 36 groups', tone: 'positive' },
-  { label: 'Education views', value: '84.2k', detail: 'Public content only', tone: 'blue' },
-  { label: 'Ad revenue', value: '$2,480', detail: 'Contextual placements', tone: 'positive' },
-] as const
-
 export const adminMetrics = [
   { label: 'Active users', value: '2,480', detail: '+12.4% this month', tone: 'positive' },
   { label: 'Cloud vault health', value: '99.98%', detail: 'R2 storage operational', tone: 'positive' },

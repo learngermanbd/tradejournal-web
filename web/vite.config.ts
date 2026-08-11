@@ -6,4 +6,14 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    rollupOptions: {
+      input: {
+        home: 'index.html',
+        app: 'app.html',
+        marketing: 'marketing.html',
+        preview: 'preview-all-pages.html',
+      },
+    },
+  },
 })

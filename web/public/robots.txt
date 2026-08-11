@@ -1,2 +1,9 @@
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /app.html
+Disallow: /preview-all-pages.html
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /login
+
+Sitemap: https://learngermanwith.fun/sitemap.xml
