@@ -226,3 +226,38 @@ button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset
   .social-button.telegram { grid-column: auto; }
   .trade-modal { padding: 18px; }
 }
+
+/* UI/UX Pro Max motion layer: short, purposeful feedback with a reduced-motion escape hatch. */
+@keyframes app-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sidebar-enter { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes card-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes modal-enter { from { opacity: 0; transform: scale(.97) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.app { animation: app-enter .45s cubic-bezier(.22,1,.36,1) both; }
+.sidebar { animation: sidebar-enter .5s cubic-bezier(.22,1,.36,1) both; }
+.topbar { animation: app-enter .5s .08s cubic-bezier(.22,1,.36,1) both; }
+.workspace { animation: app-enter .55s .14s cubic-bezier(.22,1,.36,1) both; }
+.metric-card, .content-grid > .card, .workspace > .card { transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+.metric-card:hover, .content-grid > .card:hover, .workspace > .card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--brand) 28%, var(--line)); box-shadow: 0 22px 50px rgba(31,54,100,.12); }
+.metric-grid .metric-card { animation: card-enter .45s cubic-bezier(.22,1,.36,1) both; }
+.metric-grid .metric-card:nth-child(2) { animation-delay: .06s; }
+.metric-grid .metric-card:nth-child(3) { animation-delay: .12s; }
+.metric-grid .metric-card:nth-child(4) { animation-delay: .18s; }
+.icon-button, .primary-button, .secondary-button, .select, .toggle, .social-button, .demo-button { transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, color .18s ease, border-color .18s ease; }
+.icon-button:hover, .primary-button:hover, .secondary-button:hover, .select:hover, .social-button:hover, .demo-button:hover { transform: translateY(-2px); }
+.primary-button:active, .secondary-button:active, .icon-button:active, .select:active { transform: translateY(0) scale(.97); }
+.nav-item { transition: transform .18s ease, color .18s ease, background-color .18s ease; }
+.nav-item:hover { transform: translateX(3px); }
+.chart-line { animation: app-enter .8s .22s ease both; transform-origin: bottom left; }
+.progress i { transition: width .7s cubic-bezier(.22,1,.36,1); }
+.modal-backdrop { animation: app-enter .2s ease both; }
+.trade-modal { animation: modal-enter .3s cubic-bezier(.22,1,.36,1) both; }
+.auth-card { animation: modal-enter .5s cubic-bezier(.22,1,.36,1) both; }
+.social-button:nth-child(1) { animation: card-enter .35s .08s both; }
+.social-button:nth-child(2) { animation: card-enter .35s .12s both; }
+.social-button:nth-child(3) { animation: card-enter .35s .16s both; }
+.social-button:nth-child(4) { animation: card-enter .35s .20s both; }
+.social-button:nth-child(5) { animation: card-enter .35s .24s both; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
