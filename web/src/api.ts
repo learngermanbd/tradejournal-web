@@ -1,6 +1,7 @@
 import type { Trade, TradeInput } from './trade'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
+const configuredApiUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
+const API_BASE_URL = configuredApiUrl ?? (import.meta.env.DEV ? 'http://127.0.0.1:8787' : '')
 
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string, public readonly fields?: Record<string, string>) {
