@@ -37,7 +37,7 @@ https://community.learngermanwith.fun/ community application
 https://admin.learngermanwith.fun/    protected admin application
 ```
 
-The community application shares authentication and branding with the user app but has separate navigation, moderation controls, sharing permissions, and community data boundaries. See `SEO-CRAWL-POLICY.md` for public indexing and private-route rules.
+The community application shares authentication and branding with the user app but has separate navigation, moderation controls, sharing permissions, community data boundaries, and public-only monetization. See `SEO-CRAWL-POLICY.md` and `COMMUNITY-MONETIZATION.md` for indexing and advertising rules.
 
 Only the marketing website and intentionally published community content may be indexed by Google. The user app, admin panel, authenticated community pages, private groups, messages, drafts, and account routes must use noindex protection and never appear in sitemaps.
 
@@ -68,6 +68,7 @@ Only the marketing website and intentionally published community content may be 
 - `sync`: encrypted vault export/import and conflict resolution
 - `integrations`: R2, read-only brokers, billing, AI consent, and monitoring
 - `ui`: responsive components, accessible forms, charts, and localization
+- `monetization`: contextual ads, sponsorships, affiliate disclosures, memberships, and ad-free entitlements
 
 ## Web-first build phases
 
