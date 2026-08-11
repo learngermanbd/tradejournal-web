@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="TradeJournal — a privacy-first trading journal and monthly analysis workspace.">
+  <title>TradeJournal — Trading Journal Prototype</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-2: #f0f3f8;
+      --surface-3: #e9eef6;
+      --text: #172033;
+      --muted: #6c7890;
+      --line: #e2e7f0;
+      --primary: #4059d7;
+      --primary-dark: #2e43b5;
+      --primary-soft: #edf0ff;
+      --positive: #008b72;
+      --positive-soft: #e3f7f2;
+      --negative: #c64d5c;
+      --negative-soft: #fff0f2;
+      --warning: #b87416;
+      --warning-soft: #fff6e6;
+      --shadow: 0 18px 50px rgba(31, 45, 80, .09);
+      --radius-lg: 22px;
+      --radius-md: 15px;
+      --radius-sm: 10px;
+      --nav-width: 248px;
+      --focus: 0 0 0 3px rgba(64, 89, 215, .22);
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #101521;
+      --surface: #171e2d;
+      --surface-2: #1d2637;
+      --surface-3: #263248;
+      --text: #edf1fa;
+      --muted: #9ca8bc;
+      --line: #2a3549;
+      --primary: #8d9cff;
+      --primary-dark: #aeb8ff;
+      --primary-soft: #242b54;
+      --positive: #5bd5bd;
+      --positive-soft: #163d3b;
+      --negative: #ff8f9d;
+      --negative-soft: #452432;
+      --warning: #f3bb64;
+      --warning-soft: #44341c;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .25);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: none; box-shadow: var(--focus); }
+    a { color: inherit; }
+
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: var(--nav-width);
+      flex: 0 0 var(--nav-width);
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      padding: 24px 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 12px; }
+    .brand-mark {
+      width: 36px; height: 36px; border-radius: 12px; color: white;
+      background: linear-gradient(145deg, var(--primary), #7183ff);
+      display: grid; place-items: center; box-shadow: 0 8px 18px rgba(64, 89, 215, .26);
+    }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .brand-name { font-size: 17px; font-weight: 750; letter-spacing: -.03em; }
+    .brand-subtitle { display: block; color: var(--muted); font-size: 10px; margin-top: 1px; }
+    .nav-group { display: grid; gap: 6px; }
+    .nav-label { color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-size: 10px; font-weight: 750; padding: 0 13px 4px; }
+    .nav-button {
+      border: 0; background: transparent; color: var(--muted); width: 100%; text-align: left;
+      border-radius: 12px; padding: 11px 12px; display: flex; align-items: center; gap: 12px; font-weight: 650;
+      transition: .18s ease;
+    }
+    .nav-button:hover { background: var(--surface-2); color: var(--text); }
+    .nav-button.active { background: var(--primary-soft); color: var(--primary); }
+    .nav-icon { width: 19px; height: 19px; display: grid; place-items: center; flex: 0 0 19px; }
+    .nav-icon svg { width: 18px; height: 18px; }
+    .sidebar-footer { margin-top: auto; display: grid; gap: 12px; }
+    .privacy-card { background: var(--positive-soft); color: var(--positive); border-radius: 14px; padding: 12px; font-size: 11px; }
+    .privacy-card strong { display: block; font-size: 12px; margin-bottom: 3px; }
+    .user-chip { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e1c5ab; color: #6a452d; display: grid; place-items: center; font-weight: 800; }
+    .user-name { font-weight: 700; font-size: 12px; }
+    .user-plan { color: var(--muted); font-size: 11px; }
+
+    .main { min-width: 0; flex: 1; padding: 24px clamp(20px, 3vw, 48px) 40px; }
+    .topbar { max-width: 1430px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .eyebrow { color: var(--primary); font-weight: 800; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(24px, 3vw, 31px); line-height: 1.1; letter-spacing: -.045em; margin-top: 4px; }
+    h2 { font-size: 18px; letter-spacing: -.025em; }
+    h3 { font-size: 14px; }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .icon-button, .select-button, .ghost-button, .primary-button, .secondary-button {
+      border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--text);
+      min-height: 40px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;
+      transition: .18s ease;
+    }
+    .icon-button { width: 40px; padding: 0; }
+    .icon-button:hover, .select-button:hover, .ghost-button:hover, .secondary-button:hover { border-color: var(--primary); color: var(--primary); }
+    .icon-button svg { width: 18px; height: 18px; }
+    .primary-button { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 8px 18px rgba(64, 89, 215, .2); }
+    .primary-button:hover { background: var(--primary-dark); border-color: var(--primary-dark); transform: translateY(-1px); }
+    .secondary-button { background: var(--primary-soft); color: var(--primary); border-color: transparent; }
+    .ghost-button { border-color: transparent; background: transparent; padding-left: 8px; padding-right: 8px; }
+    .mobile-menu { display: none; }
+    .view { max-width: 1430px; margin: 0 auto; display: none; animation: view-in .25s ease; }
+    .view.active { display: block; }
+    @keyframes view-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+    .hero-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+    .hero-copy { min-width: 0; }
+    .hero-copy p { color: var(--muted); margin-top: 8px; max-width: 620px; }
+    .period-control { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+    .period-control .select-button { min-width: 132px; justify-content: space-between; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; margin-bottom: 14px; }
+    .metric-card { padding: 18px; min-height: 124px; }
+    .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .metric-value { font-size: 26px; line-height: 1; letter-spacing: -.05em; font-weight: 780; margin: 17px 0 8px; font-variant-numeric: tabular-nums; }
+    .metric-foot { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 750; }
+    .positive { color: var(--positive); }
+    .negative { color: var(--negative); }
+    .neutral { color: var(--muted); }
+    .badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; font-size: 10px; font-weight: 800; padding: 5px 8px; white-space: nowrap; }
+    .badge.positive { background: var(--positive-soft); }
+    .badge.negative { background: var(--negative-soft); }
+    .badge.warning { background: var(--warning-soft); color: var(--warning); }
+    .badge.primary { background: var(--primary-soft); color: var(--primary); }
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .85fr); gap: 14px; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 0; }
+    .card-header p { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .chart-card { min-height: 318px; overflow: hidden; }
+    .chart-wrap { padding: 18px 20px 14px; }
+    .chart-legend { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 11px; }
+    .legend-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; background: var(--primary); }
+    .chart-svg { display: block; width: 100%; height: 210px; margin-top: 10px; overflow: visible; }
+    .chart-grid-line { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 5; }
+    .chart-axis { fill: var(--muted); font-size: 10px; }
+    .chart-area { fill: url(#area); }
+    .chart-line { fill: none; stroke: var(--primary); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .chart-dot { fill: var(--surface); stroke: var(--primary); stroke-width: 2; }
+    .review-card { padding-bottom: 20px; }
+    .review-body { padding: 20px; }
+    .review-callout { background: linear-gradient(135deg, var(--primary-soft), var(--surface-2)); border-radius: 15px; padding: 16px; margin-bottom: 16px; }
+    .review-callout strong { display: block; margin-bottom: 5px; }
+    .review-callout p { color: var(--muted); font-size: 12px; }
+    .progress-label { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-weight: 700; margin-bottom: 7px; }
+    .progress { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+    .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+    .review-list { display: grid; gap: 10px; margin-top: 17px; }
+    .review-item { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+    .review-check { width: 19px; height: 19px; border-radius: 50%; background: var(--positive-soft); color: var(--positive); display: grid; place-items: center; font-weight: 900; font-size: 11px; }
+    .review-check.pending { background: var(--surface-3); color: var(--muted); }
+    .lower-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 14px; margin-top: 14px; }
+    .table-card { overflow: hidden; }
+    .table-header { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .trade-list { display: grid; }
+    .trade-row { border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(125px, 1fr) 1.1fr .75fr .8fr auto; align-items: center; gap: 13px; padding: 13px 20px; transition: background .15s ease; }
+    .trade-row:hover { background: var(--surface-2); }
+    .trade-symbol { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .symbol-icon { width: 30px; height: 30px; border-radius: 9px; background: var(--surface-3); display: grid; place-items: center; color: var(--primary); font-size: 11px; font-weight: 850; }
+    .trade-symbol strong, .trade-meta strong { display: block; font-size: 12px; }
+    .trade-symbol span, .trade-meta span { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+    .trade-pnl { font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+    .table-more { padding: 13px 20px; border-top: 1px solid var(--line); text-align: center; }
+    .insight-card { padding-bottom: 18px; }
+    .insight-list { display: grid; gap: 10px; padding: 18px 20px 0; }
+    .insight { display: flex; gap: 10px; padding: 12px; border-radius: 13px; background: var(--surface-2); }
+    .insight-icon { flex: 0 0 26px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; background: var(--positive-soft); color: var(--positive); font-weight: 900; }
+    .insight-icon.warn { background: var(--warning-soft); color: var(--warning); }
+    .insight p { color: var(--muted); font-size: 11px; margin-top: 3px; }
+
+    .section-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 17px; flex-wrap: wrap; }
+    .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+    .search-input { min-height: 40px; width: 215px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--text); padding: 0 13px; }
+    .filter-chip { border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); min-height: 36px; padding: 0 12px; font-size: 12px; font-weight: 700; }
+    .filter-chip.active { background: var(--primary-soft); color: var(--primary); border-color: transparent; }
+    .journal-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr); gap: 14px; }
+    .journal-table { overflow: hidden; }
+    .journal-table .trade-row { grid-template-columns: minmax(140px, 1.15fr) .8fr .8fr .8fr .8fr; }
+    .journal-table .trade-row.header { color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; background: var(--surface-2); }
+    .journal-table .trade-row.header:hover { background: var(--surface-2); }
+    .calendar-card { padding-bottom: 17px; }
+    .calendar { padding: 17px 18px 0; }
+    .calendar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .calendar-week, .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    .calendar-week span { text-align: center; color: var(--muted); font-size: 10px; font-weight: 750; }
+    .day { min-height: 45px; border: 1px solid var(--line); border-radius: 8px; padding: 5px; color: var(--muted); font-size: 10px; }
+    .day.empty { border-color: transparent; }
+    .day.has-profit { border-color: color-mix(in srgb, var(--positive) 25%, var(--line)); background: var(--positive-soft); color: var(--positive); }
+    .day.has-loss { border-color: color-mix(in srgb, var(--negative) 25%, var(--line)); background: var(--negative-soft); color: var(--negative); }
+    .day strong { display: block; color: var(--text); font-size: 11px; }
+    .day span { display: block; margin-top: 5px; font-size: 9px; font-weight: 800; }
+    .calendar-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 17px 18px 0; }
+    .mini-stat { background: var(--surface-2); border-radius: 11px; padding: 10px; }
+    .mini-stat span { display: block; color: var(--muted); font-size: 10px; }
+    .mini-stat strong { display: block; margin-top: 4px; font-size: 13px; }
+
+    .analysis-hero { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 17px; }
+    .analysis-tabs { display: flex; gap: 5px; background: var(--surface-2); border-radius: 12px; padding: 4px; margin-bottom: 15px; overflow-x: auto; }
+    .analysis-tab { border: 0; background: transparent; color: var(--muted); padding: 9px 13px; border-radius: 9px; font-size: 12px; font-weight: 750; white-space: nowrap; }
+    .analysis-tab.active { background: var(--surface); color: var(--primary); box-shadow: 0 2px 8px rgba(31, 45, 80, .08); }
+    .analysis-panel { display: none; }
+    .analysis-panel.active { display: block; }
+    .analysis-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 11px; margin-bottom: 14px; }
+    .analysis-metric { padding: 15px; min-height: 95px; }
+    .analysis-metric span { color: var(--muted); display: block; font-size: 11px; font-weight: 700; }
+    .analysis-metric strong { display: block; font-size: 20px; margin-top: 11px; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .analysis-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); gap: 14px; }
+    .bar-list { padding: 18px 20px 20px; display: grid; gap: 15px; }
+    .bar-line { display: grid; gap: 7px; }
+    .bar-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }
+    .bar-meta span { color: var(--muted); }
+    .bar-track { height: 9px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--primary); border-radius: inherit; }
+    .bar-fill.good { background: var(--positive); }
+    .analysis-note { padding: 20px; }
+    .analysis-note .review-callout { margin: 0; }
+    .report-section { margin-top: 14px; }
+    .report-section .card { padding-bottom: 20px; }
+    .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 18px 20px 0; }
+    .comparison-box { border: 1px solid var(--line); border-radius: 13px; padding: 14px; }
+    .comparison-box h3 { margin-bottom: 9px; }
+    .comparison-box p { color: var(--muted); font-size: 12px; }
+
+    .accounts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .account-card { padding: 18px; position: relative; overflow: hidden; }
+    .account-card::after { content: ""; position: absolute; width: 110px; height: 110px; border-radius: 50%; right: -35px; top: -40px; background: var(--primary-soft); opacity: .65; }
+    .account-top { display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1; }
+    .account-name { font-size: 15px; font-weight: 800; }
+    .account-kind { color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .account-balance { margin-top: 24px; font-size: 25px; font-weight: 800; letter-spacing: -.05em; position: relative; z-index: 1; }
+    .account-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 8px; position: relative; z-index: 1; }
+    .settings-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 14px; }
+    .settings-menu { padding: 10px; height: max-content; }
+    .settings-menu button { border: 0; border-radius: 10px; background: transparent; color: var(--muted); text-align: left; width: 100%; padding: 10px; font-weight: 700; }
+    .settings-menu button.active, .settings-menu button:hover { background: var(--primary-soft); color: var(--primary); }
+    .settings-panel { padding: 22px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .settings-row:last-child { border-bottom: 0; }
+    .settings-row strong { display: block; font-size: 13px; }
+    .settings-row p { color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .switch { width: 42px; height: 24px; border: 0; border-radius: 999px; background: var(--surface-3); padding: 3px; position: relative; }
+    .switch::after { content: ""; width: 18px; height: 18px; border-radius: 50%; position: absolute; top: 3px; left: 3px; background: var(--surface); box-shadow: 0 2px 5px rgba(0,0,0,.15); transition: .18s ease; }
+    .switch.on { background: var(--primary); }
+    .switch.on::after { left: 21px; }
+
+    .bottom-nav { display: none; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(12, 18, 32, .56); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10; }
+    .modal-backdrop.open { display: flex; }
+    .modal { max-width: 680px; width: 100%; max-height: min(850px, 92vh); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 30px 90px rgba(0,0,0,.25); }
+    .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 22px 24px 16px; border-bottom: 1px solid var(--line); }
+    .modal-head p { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .modal-body { padding: 20px 24px 24px; }
+    .form-section { margin-bottom: 20px; }
+    .form-section-title { color: var(--primary); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; margin-bottom: 11px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: var(--muted); font-size: 11px; font-weight: 750; }
+    .field input, .field select, .field textarea { border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 10px; min-height: 42px; padding: 9px 11px; width: 100%; }
+    .field textarea { min-height: 80px; resize: vertical; }
+    .segmented { display: flex; gap: 5px; padding: 4px; background: var(--surface-2); border-radius: 11px; }
+    .segmented button { border: 0; background: transparent; color: var(--muted); border-radius: 8px; flex: 1; padding: 8px 10px; font-weight: 750; font-size: 12px; }
+    .segmented button.active { background: var(--surface); color: var(--primary); box-shadow: 0 2px 7px rgba(31,45,80,.08); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
+    .toast { position: fixed; right: 22px; bottom: 22px; background: var(--text); color: var(--surface); border-radius: 12px; padding: 12px 16px; font-size: 12px; font-weight: 700; opacity: 0; pointer-events: none; transform: translateY(8px); transition: .2s ease; z-index: 20; }
+    .toast.show { opacity: 1; transform: none; }
+
+    @media (max-width: 1150px) {
+      :root { --nav-width: 218px; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .analysis-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .dashboard-grid, .lower-grid, .journal-layout, .analysis-grid { grid-template-columns: 1fr; }
+      .accounts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 760px) {
+      .app-shell { display: block; padding-bottom: 75px; }
+      .sidebar { display: none; }
+      .main { padding: 17px 15px 28px; }
+      .topbar { margin-bottom: 18px; }
+      .mobile-menu { display: inline-flex; }
+      .topbar-left .eyebrow { display: none; }
+      .top-actions .select-button { display: none; }
+      .top-actions { gap: 6px; }
+      .hero-row { display: block; margin-bottom: 16px; }
+      .hero-copy p { font-size: 12px; }
+      .period-control { justify-content: flex-start; margin-top: 14px; }
+      h1 { font-size: 25px; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+      .metric-card { min-height: 108px; padding: 14px; }
+      .metric-value { font-size: 22px; margin: 14px 0 7px; }
+      .chart-card { min-height: 295px; }
+      .card-header { padding: 16px 15px 0; }
+      .chart-wrap { padding: 14px 15px; }
+      .review-body, .insight-list, .bar-list, .analysis-note, .comparison-grid { padding-left: 15px; padding-right: 15px; }
+      .lower-grid { margin-top: 9px; }
+      .trade-row { grid-template-columns: minmax(125px, 1fr) .8fr auto; gap: 9px; padding: 12px 15px; }
+      .trade-row > :nth-child(2), .trade-row > :nth-child(4) { display: none; }
+      .trade-row .trade-pnl { text-align: right; }
+      .table-header { padding: 16px 15px; }
+      .section-toolbar { align-items: stretch; }
+      .toolbar-left, .toolbar-right { width: 100%; }
+      .search-input { width: 100%; }
+      .journal-table .trade-row { grid-template-columns: minmax(125px, 1fr) .8fr auto; }
+      .journal-table .trade-row > :nth-child(3), .journal-table .trade-row > :nth-child(4) { display: none; }
+      .analysis-hero { display: block; }
+      .analysis-hero .period-control { margin-top: 12px; }
+      .analysis-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+      .analysis-metric { min-height: 82px; padding: 13px; }
+      .analysis-metric strong { font-size: 18px; margin-top: 8px; }
+      .accounts-grid { grid-template-columns: 1fr; }
+      .settings-layout { grid-template-columns: 1fr; }
+      .settings-menu { display: flex; overflow-x: auto; gap: 4px; }
+      .settings-menu button { white-space: nowrap; width: auto; }
+      .bottom-nav { position: fixed; display: grid; grid-template-columns: repeat(5, 1fr); z-index: 5; left: 10px; right: 10px; bottom: 10px; padding: 7px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(18px); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+      .bottom-nav button { border: 0; background: transparent; color: var(--muted); font-size: 9px; font-weight: 750; display: grid; place-items: center; gap: 3px; padding: 5px 2px; border-radius: 11px; }
+      .bottom-nav button.active { color: var(--primary); background: var(--primary-soft); }
+      .bottom-nav svg { width: 18px; height: 18px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .modal { border-radius: 20px; }
+      .modal-head, .modal-body { padding-left: 17px; padding-right: 17px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 17.5 9.2 13l3 2.7L19 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.5 8H19v3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><span class="brand-name">TradeJournal</span><span class="brand-subtitle">your edge, measured</span></div>
+      </div>
+      <nav class="nav-group">
+        <div class="nav-label">Workspace</div>
+        <button class="nav-button active" data-view="home"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-12h6V4h-6v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>Home</button>
+        <button class="nav-button" data-view="journal"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 4.5h12a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Journal</button>
+        <button class="nav-button" data-view="analysis"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 19V9m7 10V5m7 14v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m4 7 4-3 4 2 7-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Analysis</button>
+        <button class="nav-button" data-view="accounts"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9h17M7 15h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Accounts</button>
+      </nav>
+      <nav class="nav-group">
+        <div class="nav-label">Improve</div>
+        <button class="nav-button" data-view="notes"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4.5h14v15H5z" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h6M8 16h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>Trading diary</button>
+        <button class="nav-button" data-view="settings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.8"/><path d="m19.4 15 .8 1.8-1.8 1.8-1.8-.8a7.5 7.5 0 0 1-1.5.9l-.4 1.9H11l-.4-1.9a7.5 7.5 0 0 1-1.5-.9l-1.8.8-1.8-1.8.8-1.8a7.5 7.5 0 0 1-.6-1.5L3.8 13v-2.6l1.9-.5a7.5 7.5 0 0 1 .6-1.5l-.8-1.8 1.8-1.8 1.8.8a7.5 7.5 0 0 1 1.5-.6l.4-2h2.6l.4 2a7.5 7.5 0 0 1 1.5.6l1.8-.8 1.8 1.8-.8 1.8c.3.5.5 1 .6 1.5l1.9.5V13l-1.9.5c-.2.5-.4 1-.6 1.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>Settings</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="privacy-card"><strong>Local-first & private</strong>Your trades stay on this device. Drive sync is always optional.</div>
+        <div class="user-chip"><div class="avatar">AK</div><div><div class="user-name">Alex Kim</div><div class="user-plan">Free plan · Main account</div></div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-button mobile-menu" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+          <div><div class="eyebrow">Trading workspace</div><h1 id="page-title">Good morning, Alex</h1></div>
+        </div>
+        <div class="top-actions">
+          <button class="select-button" aria-label="Select account">Main account <span>⌄</span></button>
+          <button class="icon-button" id="theme-toggle" aria-label="Toggle color theme"><svg viewBox="0 0 24 24" fill="none"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button>
+          <button class="icon-button" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="primary-button" id="open-trade"><span>＋</span> Add trade</button>
+        </div>
+      </header>
+
+      <section class="view active" id="view-home" aria-labelledby="page-title">
+        <div class="hero-row"><div class="hero-copy"><div class="eyebrow">Performance snapshot</div><h2>Make your decisions measurable.</h2><p>Review what worked, understand what changed, and carry one clear improvement into your next session.</p></div><div class="period-control"><button class="select-button">March 2026 <span>⌄</span></button><button class="select-button">All accounts <span>⌄</span></button></div></div>
+        <div class="metric-grid">
+          <article class="card metric-card"><div class="metric-top"><span>Net P&amp;L</span><span class="badge positive">This month</span></div><div class="metric-value positive">+$1,245.80</div><div class="metric-foot positive">↑ 8.4% <span class="neutral">vs. last month</span></div></article>
+          <article class="card metric-card"><div class="metric-top"><span>Win rate</span><span>42 trades</span></div><div class="metric-value">58.3%</div><div class="metric-foot positive">↑ 4.1 pts <span class="neutral">vs. last month</span></div></article>
+          <article class="card metric-card"><div class="metric-top"><span>Expectancy</span><span class="badge primary">Per trade</span></div><div class="metric-value">+$29.66</div><div class="metric-foot positive">+0.42R <span class="neutral">average R</span></div></article>
+          <article class="card metric-card"><div class="metric-top"><span>Max drawdown</span><span class="badge warning">Risk</span></div><div class="metric-value negative">−3.2%</div><div class="metric-foot positive">Within limit <span class="neutral">of 5%</span></div></article>
+        </div>
+        <div class="dashboard-grid">
+          <article class="card chart-card"><div class="card-header"><div><h2>Equity curve</h2><p>Account growth across your recorded trades</p></div><div class="chart-legend"><span><i class="legend-dot"></i>Equity</span><span class="neutral">+$1,245.80</span></div></div><div class="chart-wrap"><svg class="chart-svg" viewBox="0 0 720 220" role="img" aria-label="Equity curve rising from 10,000 to 13,695 dollars"><defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4059d7" stop-opacity=".22"/><stop offset="1" stop-color="#4059d7" stop-opacity="0"/></linearGradient></defs><line class="chart-grid-line" x1="0" y1="30" x2="700" y2="30"/><line class="chart-grid-line" x1="0" y1="80" x2="700" y2="80"/><line class="chart-grid-line" x1="0" y1="130" x2="700" y2="130"/><line class="chart-grid-line" x1="0" y1="180" x2="700" y2="180"/><path class="chart-area" d="M0 178 L55 166 L110 171 L165 145 L220 151 L275 127 L330 135 L385 108 L440 119 L495 96 L550 103 L605 69 L660 78 L700 40 L700 205 L0 205Z"/><path class="chart-line" d="M0 178 L55 166 L110 171 L165 145 L220 151 L275 127 L330 135 L385 108 L440 119 L495 96 L550 103 L605 69 L660 78 L700 40"/><circle class="chart-dot" cx="700" cy="40" r="5"/><text class="chart-axis" x="0" y="218">Mar 1</text><text class="chart-axis" x="218" y="218">Mar 10</text><text class="chart-axis" x="440" y="218">Mar 20</text><text class="chart-axis" x="660" y="218">Mar 31</text><text class="chart-axis" x="650" y="28">$13.7k</text></svg></div></article>
+          <article class="card review-card"><div class="card-header"><div><h2>Monthly review</h2><p>Turn your data into one next step</p></div><span class="badge primary">72% complete</span></div><div class="review-body"><div class="review-callout"><strong>Your review is ready</strong><p>You have enough data to spot patterns in your March performance.</p></div><div class="progress-label"><span>Review progress</span><span>4 of 6</span></div><div class="progress"><span style="width:72%"></span></div><div class="review-list"><div class="review-item"><span class="review-check">✓</span> Performance summary</div><div class="review-item"><span class="review-check">✓</span> Strategy review</div><div class="review-item"><span class="review-check">✓</span> Risk review</div><div class="review-item"><span class="review-check">✓</span> Psychology notes</div><div class="review-item"><span class="review-check pending">5</span> One behavior to improve</div><div class="review-item"><span class="review-check pending">6</span> Next-month goal</div></div><button class="secondary-button" style="width:100%; margin-top:18px" data-view="analysis">Continue review <span>→</span></button></div></article>
+        </div>
+        <div class="lower-grid">
+          <article class="card table-card"><div class="table-header"><div><h2>Recent trades</h2><p class="neutral" style="font-size:11px;margin-top:4px">Your latest journal entries</p></div><button class="ghost-button" data-view="journal">View journal →</button></div><div class="trade-list"><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">NV</div><div><strong>NVDA</strong><span>Long · Breakout</span></div></div><div class="trade-meta"><strong>Mar 24, 10:14 AM</strong><span>Main account</span></div><div class="trade-meta"><strong>+2.4R</strong><span>Risk $100</span></div><div class="trade-pnl positive">+$240.00</div><span class="badge positive">Plan followed</span></div><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">EU</div><div><strong>EUR/USD</strong><span>Short · Reversal</span></div></div><div class="trade-meta"><strong>Mar 23, 08:42 AM</strong><span>Main account</span></div><div class="trade-meta"><strong>−1.0R</strong><span>Risk $85</span></div><div class="trade-pnl negative">−$85.00</div><span class="badge negative">Moved stop</span></div><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">BTC</div><div><strong>BTC/USDT</strong><span>Long · Momentum</span></div></div><div class="trade-meta"><strong>Mar 22, 15:06 PM</strong><span>Crypto account</span></div><div class="trade-meta"><strong>+1.8R</strong><span>Risk $120</span></div><div class="trade-pnl positive">+$216.00</div><span class="badge positive">Calm</span></div><div class="table-more"><button class="ghost-button" data-view="journal">View all 42 trades →</button></div></div></article>
+          <article class="card insight-card"><div class="card-header"><div><h2>Patterns to review</h2><p>Based on your recorded data</p></div><span class="badge primary">Local analysis</span></div><div class="insight-list"><div class="insight"><div class="insight-icon">↑</div><div><strong>Breakouts are your edge</strong><p>12 trades · 66% win rate · +$890 this month</p></div></div><div class="insight"><div class="insight-icon warn">!</div><div><strong>Watch post-loss entries</strong><p>3 trades after a loss averaged −1.4R.</p></div></div><div class="insight"><div class="insight-icon">◷</div><div><strong>Your best window</strong><p>Most profitable between 09:30 and 11:00.</p></div></div></div></article>
+        </div>
+      </section>
+
+      <section class="view" id="view-journal"><div class="hero-row"><div class="hero-copy"><div class="eyebrow">Your trade history</div><h1>Journal</h1><p>Search, tag, and review every decision without losing the context behind it.</p></div><div class="period-control"><button class="select-button">March 2026 <span>⌄</span></button><button class="select-button">Calendar view <span>⌄</span></button></div></div><div class="section-toolbar"><div class="toolbar-left"><input class="search-input" id="trade-search" type="search" placeholder="Search symbol, setup, note…" aria-label="Search trades"><button class="filter-chip active">All trades</button><button class="filter-chip">Winners</button><button class="filter-chip">Losers</button><button class="filter-chip">Needs review</button></div><div class="toolbar-right"><button class="secondary-button">Export</button><button class="primary-button" id="open-trade-2">＋ Add trade</button></div></div><div class="journal-layout"><article class="card journal-table"><div class="trade-row header"><span>Trade</span><span>Date &amp; account</span><span>Risk / R</span><span>Result</span><span>Status</span></div><div id="journal-rows"><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">NV</div><div><strong>NVDA</strong><span>Long · Breakout · #A+setup</span></div></div><div class="trade-meta"><strong>Mar 24, 2026</strong><span>Main account</span></div><div class="trade-meta"><strong>$100 / +2.4R</strong><span>1.9% size</span></div><div class="trade-pnl positive">+$240.00</div><span class="badge positive">Plan followed</span></div><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">EU</div><div><strong>EUR/USD</strong><span>Short · Reversal · #moved-stop</span></div></div><div class="trade-meta"><strong>Mar 23, 2026</strong><span>Main account</span></div><div class="trade-meta"><strong>$85 / −1.0R</strong><span>1.2% size</span></div><div class="trade-pnl negative">−$85.00</div><span class="badge negative">Moved stop</span></div><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">BTC</div><div><strong>BTC/USDT</strong><span>Long · Momentum · #calm</span></div></div><div class="trade-meta"><strong>Mar 22, 2026</strong><span>Crypto account</span></div><div class="trade-meta"><strong>$120 / +1.8R</strong><span>2.0% size</span></div><div class="trade-pnl positive">+$216.00</div><span class="badge positive">Calm</span></div><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">ES</div><div><strong>ESM6</strong><span>Short · Failed break · #early-exit</span></div></div><div class="trade-meta"><strong>Mar 21, 2026</strong><span>Futures account</span></div><div class="trade-meta"><strong>$150 / −0.4R</strong><span>2 contracts</span></div><div class="trade-pnl negative">−$60.00</div><span class="badge warning">Early exit</span></div><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">AAPL</div><div><strong>AAPL</strong><span>Long · Support · #patient</span></div></div><div class="trade-meta"><strong>Mar 20, 2026</strong><span>Main account</span></div><div class="trade-meta"><strong>$90 / +1.2R</strong><span>1.4% size</span></div><div class="trade-pnl positive">+$108.00</div><span class="badge positive">Plan followed</span></div></div><div class="table-more"><button class="ghost-button">Load more trades</button></div></article><article class="card calendar-card"><div class="card-header"><div><h2>March calendar</h2><p>Tap a day to inspect the session</p></div><button class="icon-button" aria-label="Calendar options">⋯</button></div><div class="calendar"><div class="calendar-head"><button class="ghost-button">‹</button><strong>March 2026</strong><button class="ghost-button">›</button></div><div class="calendar-week"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span></div><div class="calendar-days"><div class="day empty"></div><div class="day empty"></div><div class="day empty"></div><div class="day"><strong>1</strong></div><div class="day has-profit"><strong>2</strong><span>+$140</span></div><div class="day"><strong>3</strong></div><div class="day"><strong>4</strong></div><div class="day has-loss"><strong>5</strong><span>−$85</span></div><div class="day"><strong>6</strong></div><div class="day has-profit"><strong>7</strong><span>+$210</span></div><div class="day"><strong>8</strong></div><div class="day"><strong>9</strong></div><div class="day has-profit"><strong>10</strong><span>+$380</span></div><div class="day"><strong>11</strong></div><div class="day has-loss"><strong>12</strong><span>−$130</span></div><div class="day"><strong>13</strong></div><div class="day has-profit"><strong>14</strong><span>+$95</span></div><div class="day"><strong>15</strong></div><div class="day"><strong>16</strong></div><div class="day has-profit"><strong>17</strong><span>+$225</span></div><div class="day has-profit"><strong>18</strong><span>+$470</span></div><div class="day"><strong>19</strong></div><div class="day has-profit"><strong>20</strong><span>+$108</span></div><div class="day has-loss"><strong>21</strong><span>−$60</span></div><div class="day has-profit"><strong>22</strong><span>+$216</span></div><div class="day has-loss"><strong>23</strong><span>−$85</span></div><div class="day has-profit"><strong>24</strong><span>+$240</span></div><div class="day"><strong>25</strong></div><div class="day"><strong>26</strong></div><div class="day"><strong>27</strong></div><div class="day"><strong>28</strong></div><div class="day"><strong>29</strong></div><div class="day"><strong>30</strong></div><div class="day"><strong>31</strong></div></div></div><div class="calendar-summary"><div class="mini-stat"><span>Winning days</span><strong class="positive">12</strong></div><div class="mini-stat"><span>Losing days</span><strong class="negative">6</strong></div><div class="mini-stat"><span>Best day</span><strong>+$470</strong></div></div></article></div></section>
+
+      <section class="view" id="view-analysis"><div class="analysis-hero"><div class="hero-copy"><div class="eyebrow">Monthly performance lab</div><h1>Analysis</h1><p>Move from numbers to an honest review of the decisions behind them.</p></div><div class="period-control"><button class="select-button">March 2026 <span>⌄</span></button><button class="select-button">All accounts <span>⌄</span></button></div></div><div class="analysis-tabs" role="tablist"><button class="analysis-tab active" data-panel="overview">Overview</button><button class="analysis-tab" data-panel="strategies">Strategies</button><button class="analysis-tab" data-panel="risk">Risk</button><button class="analysis-tab" data-panel="psychology">Psychology</button><button class="analysis-tab" data-panel="time">Time &amp; market</button></div><div class="analysis-panel active" id="panel-overview"><div class="analysis-metrics"><div class="card analysis-metric"><span>Net P&amp;L</span><strong class="positive">+$1,245</strong></div><div class="card analysis-metric"><span>Win rate</span><strong>58.3%</strong></div><div class="card analysis-metric"><span>Profit factor</span><strong>1.82</strong></div><div class="card analysis-metric"><span>Expectancy</span><strong class="positive">+$29.66</strong></div><div class="card analysis-metric"><span>Max drawdown</span><strong class="negative">−3.2%</strong></div></div><div class="analysis-grid"><article class="card chart-card"><div class="card-header"><div><h2>Daily performance</h2><p>Profit and loss by session</p></div><span class="badge primary">42 trades</span></div><div class="chart-wrap"><svg class="chart-svg" viewBox="0 0 720 220" role="img" aria-label="Bar chart showing daily performance"><line class="chart-grid-line" x1="0" y1="35" x2="700" y2="35"/><line class="chart-grid-line" x1="0" y1="105" x2="700" y2="105"/><line class="chart-grid-line" x1="0" y1="175" x2="700" y2="175"/><path d="M0 105H700" stroke="var(--muted)" stroke-width="1"/><g fill="var(--positive)"><rect x="24" y="75" width="22" height="30" rx="4"/><rect x="82" y="52" width="22" height="53" rx="4"/><rect x="198" y="30" width="22" height="75" rx="4"/><rect x="256" y="67" width="22" height="38" rx="4"/><rect x="372" y="48" width="22" height="57" rx="4"/><rect x="430" y="22" width="22" height="83" rx="4"/><rect x="546" y="65" width="22" height="40" rx="4"/><rect x="604" y="42" width="22" height="63" rx="4"/></g><g fill="var(--negative)"><rect x="140" y="105" width="22" height="28" rx="4"/><rect x="314" y="105" width="22" height="20" rx="4"/><rect x="488" y="105" width="22" height="35" rx="4"/></g><text class="chart-axis" x="12" y="218">Mar 2</text><text class="chart-axis" x="185" y="218">Mar 10</text><text class="chart-axis" x="355" y="218">Mar 17</text><text class="chart-axis" x="530" y="218">Mar 24</text></svg></div></article><article class="card analysis-note"><div class="review-callout"><strong>AI-ready insight, generated locally</strong><p>Breakout setups produced 71% of your monthly profit. Losses were more common after two consecutive losing trades.</p><button class="secondary-button" style="margin-top:14px">Ask about this pattern →</button></div></article></div><div class="report-section"><article class="card"><div class="card-header"><div><h2>Compare this month</h2><p>Small differences can reveal useful habits</p></div><button class="ghost-button">Customize</button></div><div class="comparison-grid"><div class="comparison-box"><h3>This month vs. February</h3><p><strong class="positive">+$640</strong> more net P&amp;L, with 8 fewer trades. Your average winner increased by 18%.</p></div><div class="comparison-box"><h3>Long vs. short</h3><p>Long trades: <strong class="positive">+$1,080</strong> · Short trades: <strong>+$165</strong>. Review your short setup selection.</p></div></div></article></div></div><div class="analysis-panel" id="panel-strategies"><div class="analysis-grid"><article class="card"><div class="card-header"><div><h2>Strategy performance</h2><p>Where your edge is showing up</p></div></div><div class="bar-list"><div class="bar-line"><div class="bar-meta"><strong>Breakout</strong><span class="positive">+$890 · 66% win rate</span></div><div class="bar-track"><div class="bar-fill good" style="width:82%"></div></div></div><div class="bar-line"><div class="bar-meta"><strong>Reversal</strong><span>+$210 · 42% win rate</span></div><div class="bar-track"><div class="bar-fill" style="width:47%"></div></div></div><div class="bar-line"><div class="bar-meta"><strong>Momentum</strong><span>+$145 · 50% win rate</span></div><div class="bar-track"><div class="bar-fill" style="width:36%"></div></div></div></div></article><article class="card analysis-note"><div class="review-callout"><strong>Review prompt</strong><p>What makes your breakout entries different from your reversal entries? Write one condition you will preserve next month.</p><textarea placeholder="Your reflection…" style="width:100%;margin-top:13px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:10px;padding:10px;min-height:78px"></textarea></div></article></div></div><div class="analysis-panel" id="panel-risk"><div class="analysis-grid"><article class="card"><div class="card-header"><div><h2>Risk discipline</h2><p>Planned risk versus actual outcomes</p></div></div><div class="bar-list"><div class="bar-line"><div class="bar-meta"><strong>Trades within risk limit</strong><span class="positive">88%</span></div><div class="bar-track"><div class="bar-fill good" style="width:88%"></div></div></div><div class="bar-line"><div class="bar-meta"><strong>Trades with stop recorded</strong><span>93%</span></div><div class="bar-track"><div class="bar-fill" style="width:93%"></div></div></div><div class="bar-line"><div class="bar-meta"><strong>Plan followed</strong><span>81%</span></div><div class="bar-track"><div class="bar-fill" style="width:81%"></div></div></div></div></article><article class="card analysis-note"><div class="review-callout"><strong>Risk check</strong><p>Your maximum drawdown is 3.2% against a 5% limit. Keep daily loss alerts enabled and review the three trades above your planned risk.</p></div></article></div></div><div class="analysis-panel" id="panel-psychology"><div class="analysis-grid"><article class="card"><div class="card-header"><div><h2>Psychology patterns</h2><p>Connect your state of mind to your results</p></div></div><div class="insight-list"><div class="insight"><div class="insight-icon">✓</div><div><strong>Calm trades are working</strong><p>Calm entries averaged +1.1R across 15 trades.</p></div></div><div class="insight"><div class="insight-icon warn">!</div><div><strong>Post-loss entries need attention</strong><p>Three trades entered after a loss averaged −1.4R.</p></div></div><div class="insight"><div class="insight-icon warn">!</div><div><strong>Confidence below 3/5</strong><p>Low-confidence trades had a 33% win rate.</p></div></div></div></article><article class="card analysis-note"><div class="review-callout"><strong>Monthly reflection</strong><p>“My losses were not caused by one bad strategy. They came from entering too quickly after a loss.”</p><button class="secondary-button" style="margin-top:14px">Edit reflection →</button></div></article></div></div><div class="analysis-panel" id="panel-time"><div class="analysis-grid"><article class="card"><div class="card-header"><div><h2>Time and market</h2><p>Find the conditions that support your process</p></div></div><div class="bar-list"><div class="bar-line"><div class="bar-meta"><strong>09:30–11:00</strong><span class="positive">+$760</span></div><div class="bar-track"><div class="bar-fill good" style="width:78%"></div></div></div><div class="bar-line"><div class="bar-meta"><strong>11:00–13:00</strong><span>+$210</span></div><div class="bar-track"><div class="bar-fill" style="width:34%"></div></div></div><div class="bar-line"><div class="bar-meta"><strong>After 15:00</strong><span class="negative">−$180</span></div><div class="bar-track"><div class="bar-fill" style="width:21%;background:var(--negative)"></div></div></div></div></article><article class="card analysis-note"><div class="review-callout"><strong>Context matters</strong><p>Your strongest month-to-date performance came from US equities during the first 90 minutes of the session.</p></div></article></div></div></section>
+
+      <section class="view" id="view-accounts"><div class="hero-row"><div class="hero-copy"><div class="eyebrow">Capital and connections</div><h1>Accounts</h1><p>Keep live, paper, and demo performance separate while seeing the full picture when you need it.</p></div><button class="primary-button">＋ Add account</button></div><div class="accounts-grid"><article class="card account-card"><div class="account-top"><div><div class="account-name">Main account</div><div class="account-kind">Live · Interactive Brokers</div></div><span class="badge positive">Synced</span></div><div class="account-balance">$13,695.80</div><div class="account-meta"><span>Equity</span><strong class="positive">+$1,245.80 this month</strong></div></article><article class="card account-card"><div class="account-top"><div><div class="account-name">Crypto account</div><div class="account-kind">Live · Binance</div></div><span class="badge positive">Synced</span></div><div class="account-balance">$8,420.15</div><div class="account-meta"><span>Equity</span><strong class="positive">+$420.15 this month</strong></div></article><article class="card account-card"><div class="account-top"><div><div class="account-name">Practice account</div><div class="account-kind">Paper · Manual</div></div><span class="badge primary">Local</span></div><div class="account-balance">$50,000.00</div><div class="account-meta"><span>Equity</span><strong>+$2,180.00 this month</strong></div></article></div><div class="lower-grid" style="margin-top:14px"><article class="card table-card"><div class="table-header"><div><h2>Recent account activity</h2><p class="neutral" style="font-size:11px;margin-top:4px">Deposits, withdrawals, and transfers</p></div><button class="ghost-button">View all →</button></div><div class="trade-list"><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">↗</div><div><strong>Deposit</strong><span>Main account</span></div></div><div class="trade-meta"><strong>Mar 03, 2026</strong><span>Bank transfer</span></div><div></div><div class="trade-pnl positive">+$2,000.00</div><span class="badge primary">Completed</span></div><div class="trade-row"><div class="trade-symbol"><div class="symbol-icon">↔</div><div><strong>Transfer</strong><span>Main → Crypto</span></div></div><div class="trade-meta"><strong>Mar 06, 2026</strong><span>Internal</span></div><div></div><div class="trade-pnl neutral">$500.00</div><span class="badge primary">Completed</span></div></div></article><article class="card insight-card"><div class="card-header"><div><h2>Connections</h2><p>Read-only by default</p></div></div><div class="insight-list"><div class="insight"><div class="insight-icon">✓</div><div><strong>Interactive Brokers</strong><p>Last sync today at 10:40 AM</p></div></div><div class="insight"><div class="insight-icon">✓</div><div><strong>Binance</strong><p>Last sync today at 10:38 AM</p></div></div><button class="secondary-button">Manage connections →</button></div></article></div></section>
+
+      <section class="view" id="view-notes"><div class="hero-row"><div class="hero-copy"><div class="eyebrow">The mental game</div><h1>Trading diary</h1><p>Make your psychology visible without turning it into another burden.</p></div><button class="primary-button">＋ New daily note</button></div><div class="dashboard-grid"><article class="card" style="padding-bottom:20px"><div class="card-header"><div><h2>Today’s session</h2><p>Tuesday, March 24 · Main account</p></div><span class="badge positive">Saved locally</span></div><div class="modal-body" style="padding-bottom:0"><div class="form-section"><div class="form-section-title">Before trading</div><div class="form-grid"><div class="field"><label>Energy</label><select><option>Good</option><option>Low</option><option>High</option></select></div><div class="field"><label>Confidence</label><select><option>3 / 5</option><option>1 / 5</option><option>2 / 5</option><option>4 / 5</option><option>5 / 5</option></select></div><div class="field full"><label>What is your plan today?</label><textarea placeholder="Market context, setups, and rules to protect…">Focus on patient breakout entries. No trades after two consecutive losses.</textarea></div></div></div><div class="form-section"><div class="form-section-title">After trading</div><div class="form-grid"><div class="field full"><label>What did you learn?</label><textarea placeholder="Write a short reflection…">The best trade was the one where I waited for confirmation instead of anticipating it.</textarea></div></div></div><button class="primary-button">Save diary note</button></div></article><article class="card insight-card"><div class="card-header"><div><h2>Recent reflections</h2><p>Your notes become searchable context</p></div></div><div class="insight-list"><div class="insight"><div class="insight-icon">24</div><div><strong>March 24</strong><p>“Wait for confirmation. Protect the process.”</p></div></div><div class="insight"><div class="insight-icon">23</div><div><strong>March 23</strong><p>“Moved the stop because I wanted to be right.”</p></div></div><div class="insight"><div class="insight-icon">22</div><div><strong>March 22</strong><p>“Calm and selective. Followed the checklist.”</p></div></div></div></article></div></section>
+
+      <section class="view" id="view-settings"><div class="hero-row"><div class="hero-copy"><div class="eyebrow">Your workspace</div><h1>Settings</h1><p>Control how TradeJournal looks, stores data, and supports your process.</p></div><span class="badge positive">Local-first enabled</span></div><div class="settings-layout"><nav class="card settings-menu" aria-label="Settings categories"><button class="active">Preferences</button><button>Storage &amp; sync</button><button>Privacy &amp; AI</button><button>Notifications</button><button>Subscription</button></nav><article class="card settings-panel"><div class="eyebrow">Preferences</div><h2 style="margin-top:5px">Make the workspace yours</h2><div class="settings-row"><div><strong>Interface level</strong><p>Adaptive mode · advanced tools reveal as you progress</p></div><button class="select-button">Adaptive <span>⌄</span></button></div><div class="settings-row"><div><strong>Appearance</strong><p>Choose a calm workspace for every session</p></div><div class="segmented" style="width:190px"><button class="active" id="settings-system">System</button><button id="settings-light">Light</button><button id="settings-dark">Dark</button></div></div><div class="settings-row"><div><strong>Language</strong><p>English default · translation-ready for every locale</p></div><button class="select-button">English <span>⌄</span></button></div><div class="settings-row"><div><strong>Daily review reminder</strong><p>Prompt me to complete notes after the session</p></div><button class="switch on" aria-label="Daily review reminder on"></button></div><div class="settings-row"><div><strong>Google Drive sync</strong><p>Encrypted trade vault · last backup today at 10:42 AM</p></div><button class="switch on" aria-label="Google Drive sync on"></button></div><div class="settings-row"><div><strong>Cloud AI</strong><p>Off by default. Local analysis remains available.</p></div><button class="switch" aria-label="Cloud AI off"></button></div></article></div></section>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Mobile navigation"><button class="active" data-view="home"><svg viewBox="0 0 24 24" fill="none"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-12h6V4h-6v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Home</button><button data-view="journal"><svg viewBox="0 0 24 24" fill="none"><path d="M6 4.5h12a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Journal</button><button id="mobile-add"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Add</button><button data-view="analysis"><svg viewBox="0 0 24 24" fill="none"><path d="M5 19V9m7 10V5m7 14v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m4 7 4-3 4 2 7-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Analysis</button><button data-view="settings"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" stroke-width="1.8"/><path d="m19.4 15 .8 1.8-1.8 1.8-1.8-.8a7.5 7.5 0 0 1-1.5.9l-.4 1.9H11l-.4-1.9a7.5 7.5 0 0 1-1.5-.9l-1.8.8-1.8-1.8.8-1.8a7.5 7.5 0 0 1-.6-1.5L3.8 13v-2.6l1.9-.5a7.5 7.5 0 0 1 .6-1.5l-.8-1.8 1.8-1.8 1.8.8a7.5 7.5 0 0 1 1.5-.6l.4-2h2.6l.4 2a7.5 7.5 0 0 1 1.5.6l1.8-.8 1.8 1.8-.8 1.8c.3.5.5 1 .6 1.5l1.9.5V13l-1.9.5c-.2.5-.4 1-.6 1.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>More</button></nav>
+
+  <div class="modal-backdrop" id="trade-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal"><div class="modal-head"><div><div class="eyebrow">New journal entry</div><h2 id="modal-title" style="margin-top:4px">Add a trade</h2><p>Record the decision, not only the result.</p></div><button class="icon-button" id="close-trade" aria-label="Close add trade dialog">×</button></div><form class="modal-body" id="trade-form"><div class="form-section"><div class="form-section-title">Trade basics</div><div class="form-grid"><div class="field"><label for="market">Market</label><select id="market"><option>Stocks</option><option>Forex</option><option>Crypto</option><option>Futures</option><option>Options</option></select></div><div class="field"><label for="account">Account</label><select id="account"><option>Main account</option><option>Crypto account</option><option>Practice account</option></select></div><div class="field"><label for="symbol">Symbol</label><input id="symbol" name="symbol" placeholder="e.g. NVDA" required></div><div class="field"><label>Direction</label><div class="segmented"><button type="button" class="active">Long</button><button type="button">Short</button></div></div><div class="field"><label for="entry-date">Entry date</label><input id="entry-date" type="date" required></div><div class="field"><label for="exit-date">Exit date</label><input id="exit-date" type="date"></div></div></div><div class="form-section"><div class="form-section-title">Execution</div><div class="form-grid"><div class="field"><label for="entry-price">Entry price</label><input id="entry-price" type="number" step="any" placeholder="0.00"></div><div class="field"><label for="exit-price">Exit price</label><input id="exit-price" type="number" step="any" placeholder="0.00"></div><div class="field"><label for="quantity">Quantity</label><input id="quantity" type="number" step="any" placeholder="0"></div><div class="field"><label for="fees">Fees and commissions</label><input id="fees" type="number" step="any" placeholder="0.00"></div></div></div><div class="form-section"><div class="form-section-title">Plan and psychology</div><div class="form-grid"><div class="field"><label for="strategy">Strategy / setup</label><input id="strategy" placeholder="e.g. Breakout"></div><div class="field"><label for="emotion">Emotion</label><select id="emotion"><option>Calm</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></div><div class="field full"><label for="reason">Why did you enter?</label><textarea id="reason" placeholder="What did you see and what was the plan?"></textarea></div><div class="field full"><label for="notes">What happened and what did you learn?</label><textarea id="notes" placeholder="Explain the result, your psychology, and what you would improve next time."></textarea></div></div></div><div class="modal-actions"><button type="button" class="secondary-button" id="cancel-trade">Cancel</button><button type="submit" class="primary-button">Save trade</button></div></form></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite">Trade saved to your local journal.</div>
+
+  <script>
+    const body = document.body;
+    const views = [...document.querySelectorAll('.view')];
+    const navButtons = [...document.querySelectorAll('[data-view]')];
+    const titleByView = { home: 'Good morning, Alex', journal: 'Journal', analysis: 'Analysis', accounts: 'Accounts', notes: 'Trading diary', settings: 'Settings' };
+    function showView(name) {
+      views.forEach(view => view.classList.toggle('active', view.id === `view-${name}`));
+      navButtons.forEach(button => button.classList.toggle('active', button.dataset.view === name));
+      document.getElementById('page-title').textContent = titleByView[name] || 'TradeJournal';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    navButtons.forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
+
+    const modal = document.getElementById('trade-modal');
+    const openModal = () => { modal.classList.add('open'); document.getElementById('symbol').focus(); };
+    const closeModal = () => modal.classList.remove('open');
+    document.getElementById('open-trade').addEventListener('click', openModal);
+    document.getElementById('open-trade-2').addEventListener('click', openModal);
+    document.getElementById('mobile-add').addEventListener('click', openModal);
+    document.getElementById('close-trade').addEventListener('click', closeModal);
+    document.getElementById('cancel-trade').addEventListener('click', closeModal);
+    modal.addEventListener('click', event => { if (event.target === modal) closeModal(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
+
+    const toast = document.getElementById('toast');
+    function showToast(message) { toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2800); }
+    document.getElementById('trade-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const symbol = document.getElementById('symbol').value.trim().toUpperCase() || 'NEW TRADE';
+      closeModal(); event.target.reset();
+      showToast(`${symbol} saved to your local journal.`);
+      showView('journal');
+    });
+
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const next = body.dataset.theme === 'dark' ? 'light' : 'dark';
+      body.dataset.theme = next;
+      localStorage.setItem('tradejournal-theme', next);
+      showToast(`${next === 'dark' ? 'Dark' : 'Light'} theme enabled.`);
+    });
+    const savedTheme = localStorage.getItem('tradejournal-theme');
+    if (savedTheme) body.dataset.theme = savedTheme;
+    document.getElementById('settings-light').addEventListener('click', () => { body.dataset.theme = 'light'; localStorage.setItem('tradejournal-theme', 'light'); });
+    document.getElementById('settings-dark').addEventListener('click', () => { body.dataset.theme = 'dark'; localStorage.setItem('tradejournal-theme', 'dark'); });
+    document.getElementById('settings-system').addEventListener('click', () => { delete body.dataset.theme; localStorage.removeItem('tradejournal-theme'); });
+
+    document.querySelectorAll('.analysis-tab').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('.analysis-tab').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll('.analysis-panel').forEach(panel => panel.classList.remove('active'));
+      tab.classList.add('active'); document.getElementById(`panel-${tab.dataset.panel}`).classList.add('active');
+    }));
+    document.querySelectorAll('.filter-chip').forEach(chip => chip.addEventListener('click', () => { document.querySelectorAll('.filter-chip').forEach(item => item.classList.remove('active')); chip.classList.add('active'); }));
+    document.querySelectorAll('.segmented button').forEach(button => button.addEventListener('click', () => { button.parentElement.querySelectorAll('button').forEach(item => item.classList.remove('active')); button.classList.add('active'); }));
+    document.querySelectorAll('.switch').forEach(button => button.addEventListener('click', () => button.classList.toggle('on')));
+    document.querySelectorAll('.settings-menu button').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.settings-menu button').forEach(item => item.classList.remove('active')); button.classList.add('active'); showToast(`${button.textContent} settings selected.`); }));
+    document.querySelectorAll('.secondary-button, .ghost-button').forEach(button => button.addEventListener('click', event => { const target = event.currentTarget.dataset.view; if (target) showView(target); }));
+    document.getElementById('trade-search').addEventListener('input', event => { const term = event.target.value.toLowerCase(); document.querySelectorAll('#journal-rows .trade-row').forEach(row => { row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none'; }); });
+  </script>
+</body>
+</html>
