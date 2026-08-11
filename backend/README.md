@@ -1,6 +1,6 @@
 # TradeJournal backend
 
-This directory contains the free-first control-plane backend for TradeJournal. It is intentionally separate from the Android app.
+This directory contains the free-first control-plane backend for the TradeJournal web/PWA. It is intentionally separate from the browser client.
 
 ## Responsibilities
 
@@ -13,7 +13,7 @@ The backend stores and serves only control-plane data:
 - aggregate service health
 - immutable administrator audit events
 
-Trade history, journal notes, psychology entries, screenshots, and raw account history remain on the Android device by default. If the user enables Drive backup, the app encrypts the vault before uploading it to the Drive application-data folder.
+Trade history, journal notes, psychology entries, screenshots, and raw account history remain in the browser's encrypted IndexedDB vault by default. If the user enables Drive backup, the app encrypts the vault before uploading it to the Drive application-data folder.
 
 ## Provider layout
 
@@ -38,7 +38,7 @@ values ('AUTH_USER_UUID', 'admin')
 on conflict (user_id, role) do nothing;
 ```
 
-Never grant the admin role from the Android client.
+Never grant the admin role from browser code.
 
 ## Edge function setup
 
@@ -48,7 +48,7 @@ The `admin-overview` function uses the caller's JWT and checks the `admin` role 
 supabase functions deploy admin-overview
 ```
 
-The Android app should call the function with the current Supabase access token. Do not ship a service-role key in the APK.
+The web client should call the function with the current Supabase access token. Do not ship a service-role key in browser code.
 
 ## Environment variables
 
