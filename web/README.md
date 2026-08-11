@@ -60,11 +60,11 @@ The community application shares authentication and branding with the user app b
 
 ## Core implementation boundaries
 
-- `storage`: IndexedDB repositories and schema migrations
+- `storage`: Cloudflare R2 vault chunks, attachment objects, and server-side schema migrations
 - `calculations`: shared P&L, risk, margin, and R-multiple formulas
 - `auth`: Supabase session handling and role verification
 - `sync`: encrypted vault export/import and conflict resolution
-- `integrations`: Drive, read-only brokers, billing, AI consent, and monitoring
+- `integrations`: R2, read-only brokers, billing, AI consent, and monitoring
 - `ui`: responsive components, accessible forms, charts, and localization
 
 ## Web-first build phases
@@ -72,7 +72,7 @@ The community application shares authentication and branding with the user app b
 1. **Foundation** — TypeScript PWA shell, responsive design system, routing, service worker, and SaaS dashboard shell.
 2. **Cloud journal** — Worker API, encrypted R2 vault chunks, trade CRUD, calculations, accounts, diary, settings, CSV imports, and duplicate detection.
 3. **Authentication** — Supabase email login, password recovery, session persistence, MFA, and server-verified admin roles.
-4. **Cloud controls** — R2 versioning, encrypted Google Drive backup, sync metadata, conflict review, and backend admin overview.
+4. **Cloud controls** — R2 versioning, encrypted journal chunks, sync metadata, conflict review, and backend admin overview.
 5. **Integrations** — read-only broker adapters, subscriptions, notifications, privacy-safe AI, and monitoring.
 6. **Release** — accessibility, localization, security review, browser matrix, PWA install testing, Cloudflare Pages deployment, and CI.
 
@@ -81,7 +81,7 @@ The community application shares authentication and branding with the user app b
 - Static/PWA hosting: Cloudflare Pages
 - Control plane: Supabase Free tier during development
 - Source and CI: GitHub
-- Optional encrypted backup: Google Drive application-data folder
+- Encrypted journal storage: Cloudflare R2
 - No provider secrets in browser code except public client configuration
 - Broker and AI secrets stay in Edge Functions or a server-side worker
 

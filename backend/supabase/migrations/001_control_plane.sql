@@ -56,7 +56,7 @@ create table if not exists public.subscriptions (
 
 create table if not exists public.sync_metadata (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  provider text not null default 'google_drive',
+  provider text not null default 'cloudflare_r2',
   status text not null default 'never_synced',
   last_sync_at timestamptz,
   remote_version text,

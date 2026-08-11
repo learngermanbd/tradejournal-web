@@ -8,12 +8,12 @@ The backend stores and serves only control-plane data:
 
 - authenticated user profiles and preferences
 - role claims and subscription metadata
-- Google Drive sync metadata
+- Cloudflare R2 sync metadata
 - broker connection metadata (never raw credentials in the client)
 - aggregate service health
 - immutable administrator audit events
 
-Trade history, journal notes, psychology entries, screenshots, and raw account history remain in the browser's encrypted IndexedDB vault by default. If the user enables Drive backup, the app encrypts the vault before uploading it to the Drive application-data folder.
+Trade history, journal notes, psychology entries, screenshots, and raw account history are stored as encrypted Cloudflare R2 vault chunks. The browser is not the permanent data store.
 
 ## Provider layout
 
@@ -22,7 +22,7 @@ Supabase Auth       identity and sessions
 Supabase Postgres   profiles, roles, subscriptions, sync metadata, audit records
 Supabase Edge Fn    authenticated admin overview and future webhook boundaries
 Cloudflare Worker   broker/AI adapters when a server-side secret is required
-Google Drive        optional user-controlled encrypted vault
+Cloudflare R2       encrypted journal vault and attachments
 Firebase            optional FCM/Crashlytics services; no trade payloads
 ```
 
