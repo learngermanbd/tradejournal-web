@@ -12,5 +12,6 @@ data class Trade(
     val rMultiple: Double,
     val status: String,
     val note: String = "",
+    val sourceFingerprint: String = "",
     val createdAt: Long = System.currentTimeMillis(),
 )

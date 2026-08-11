@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper
 class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     private companion object {
         const val DATABASE_NAME = "tradejournal.db"
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -24,6 +24,7 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
                 rMultiple REAL NOT NULL,
                 status TEXT NOT NULL,
                 note TEXT NOT NULL,
+                sourceFingerprint TEXT NOT NULL DEFAULT '',
                 createdAt INTEGER NOT NULL
             )
             """.trimIndent(),
@@ -33,6 +34,7 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) createSupportTables(db)
+        if (oldVersion < 3) db.execSQL("ALTER TABLE trades ADD COLUMN sourceFingerprint TEXT NOT NULL DEFAULT ''")
     }
 
     private fun createSupportTables(db: SQLiteDatabase) {
@@ -57,6 +59,17 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
                 mood TEXT NOT NULL,
                 plan TEXT NOT NULL,
                 reflection TEXT NOT NULL,
+                createdAt INTEGER NOT NULL
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS imports (
+                id TEXT PRIMARY KEY NOT NULL,
+                fileName TEXT NOT NULL,
+                importedCount INTEGER NOT NULL,
+                skippedCount INTEGER NOT NULL,
                 createdAt INTEGER NOT NULL
             )
             """.trimIndent(),
@@ -86,6 +99,7 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
             val rMultiple = cursor.getColumnIndexOrThrow("rMultiple")
             val status = cursor.getColumnIndexOrThrow("status")
             val note = cursor.getColumnIndexOrThrow("note")
+            val sourceFingerprint = cursor.getColumnIndexOrThrow("sourceFingerprint")
             val createdAt = cursor.getColumnIndexOrThrow("createdAt")
             while (cursor.moveToNext()) {
                 add(
@@ -99,11 +113,56 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
                         rMultiple = cursor.getDouble(rMultiple),
                         status = cursor.getString(status),
                         note = cursor.getString(note),
+                        sourceFingerprint = cursor.getString(sourceFingerprint),
                         createdAt = cursor.getLong(createdAt),
                     ),
                 )
             }
         }
+    }
+
+    fun readTradeFingerprints(): Set<String> = readableDatabase.query(
+        "trades",
+        arrayOf("sourceFingerprint"),
+        "sourceFingerprint != ''",
+        null,
+        null,
+        null,
+        null,
+    ).use { cursor ->
+        buildSet {
+            while (cursor.moveToNext()) add(cursor.getString(0))
+        }
+    }
+
+    fun readImportRecords(): List<ImportRecord> = readableDatabase.query(
+        "imports",
+        null,
+        null,
+        null,
+        null,
+        null,
+        "createdAt DESC",
+    ).use { cursor ->
+        buildList {
+            val id = cursor.getColumnIndexOrThrow("id")
+            val fileName = cursor.getColumnIndexOrThrow("fileName")
+            val importedCount = cursor.getColumnIndexOrThrow("importedCount")
+            val skippedCount = cursor.getColumnIndexOrThrow("skippedCount")
+            val createdAt = cursor.getColumnIndexOrThrow("createdAt")
+            while (cursor.moveToNext()) add(ImportRecord(cursor.getString(id), cursor.getString(fileName), cursor.getInt(importedCount), cursor.getInt(skippedCount), cursor.getLong(createdAt)))
+        }
+    }
+
+    fun insertImportRecord(record: ImportRecord) {
+        val values = ContentValues().apply {
+            put("id", record.id)
+            put("fileName", record.fileName)
+            put("importedCount", record.importedCount)
+            put("skippedCount", record.skippedCount)
+            put("createdAt", record.createdAt)
+        }
+        writableDatabase.insertWithOnConflict("imports", null, values, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
     fun readAccounts(): List<Account> = readableDatabase.query(
@@ -187,6 +246,7 @@ class TradeStore(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, nu
             put("rMultiple", trade.rMultiple)
             put("status", trade.status)
             put("note", trade.note)
+            put("sourceFingerprint", trade.sourceFingerprint)
             put("createdAt", trade.createdAt)
         }
         writableDatabase.insertWithOnConflict("trades", null, values, SQLiteDatabase.CONFLICT_REPLACE)

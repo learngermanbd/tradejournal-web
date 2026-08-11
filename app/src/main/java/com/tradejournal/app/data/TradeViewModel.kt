@@ -14,6 +14,10 @@ class TradeViewModel(private val repository: TradeRepository) : ViewModel() {
     val accounts: StateFlow<List<Account>> = _accounts
     private val _diaryNotes = MutableStateFlow<List<DiaryNote>>(emptyList())
     val diaryNotes: StateFlow<List<DiaryNote>> = _diaryNotes
+    private val _importRecords = MutableStateFlow<List<ImportRecord>>(emptyList())
+    val importRecords: StateFlow<List<ImportRecord>> = _importRecords
+    private val _importStatus = MutableStateFlow<String?>(null)
+    val importStatus: StateFlow<String?> = _importStatus
 
     init {
         refresh()
@@ -24,6 +28,7 @@ class TradeViewModel(private val repository: TradeRepository) : ViewModel() {
             _trades.value = repository.loadTrades()
             _accounts.value = repository.loadAccounts()
             _diaryNotes.value = repository.loadDiaryNotes()
+            _importRecords.value = repository.loadImportRecords()
         }
     }
 
@@ -59,6 +64,15 @@ class TradeViewModel(private val repository: TradeRepository) : ViewModel() {
         viewModelScope.launch {
             repository.addDiaryNote(note)
             _diaryNotes.value = repository.loadDiaryNotes()
+        }
+    }
+
+    fun importCsv(fileName: String, csv: String) {
+        viewModelScope.launch {
+            val summary = repository.importCsv(fileName, csv)
+            _trades.value = repository.loadTrades()
+            _importRecords.value = repository.loadImportRecords()
+            _importStatus.value = "Imported ${summary.importedCount} trades; skipped ${summary.skippedCount} rows and ${summary.duplicateCount} duplicates."
         }
     }
 

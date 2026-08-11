@@ -2,7 +2,9 @@ package com.tradejournal.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tradejournal.app.data.Account
 import com.tradejournal.app.data.DiaryNote
+import com.tradejournal.app.data.ImportRecord
 import com.tradejournal.app.data.Trade
 import com.tradejournal.app.data.TradeJournalApplication
 import com.tradejournal.app.data.TradeViewModel
@@ -108,7 +111,7 @@ private fun TradeJournalTheme(content: @Composable () -> Unit) {
 }
 
 private enum class Role { USER, ADMIN }
-private enum class AppScreen { HOME, JOURNAL, ANALYSIS, ACCOUNTS, DIARY, ADMIN_HOME, ADMIN_USERS, ADMIN_REPORTS }
+private enum class AppScreen { HOME, JOURNAL, ANALYSIS, ACCOUNTS, DIARY, IMPORTS, ADMIN_HOME, ADMIN_USERS, ADMIN_REPORTS }
 
 // Development-only demo credential. Production must use Firebase/Auth provider claims.
 private const val DEMO_ADMIN_EMAIL = "admin@tradejournal.dev"
@@ -138,12 +141,21 @@ private fun TradeJournalApp() {
     var signedIn by rememberSaveable { mutableStateOf(false) }
     var roleName by rememberSaveable { mutableStateOf(Role.USER.name) }
     var screenName by rememberSaveable { mutableStateOf(AppScreen.HOME.name) }
-    val application = androidx.compose.ui.platform.LocalContext.current.applicationContext as TradeJournalApplication
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val application = context.applicationContext as TradeJournalApplication
     val tradeViewModel: TradeViewModel = viewModel(factory = TradeViewModel.Factory(application.tradeRepository))
     val trades by tradeViewModel.trades.collectAsStateWithLifecycle()
     val accounts by tradeViewModel.accounts.collectAsStateWithLifecycle()
     val diaryNotes by tradeViewModel.diaryNotes.collectAsStateWithLifecycle()
+    val importRecords by tradeViewModel.importRecords.collectAsStateWithLifecycle()
+    val importStatus by tradeViewModel.importStatus.collectAsStateWithLifecycle()
     var showAddTrade by remember { mutableStateOf(false) }
+    val csvPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val csv = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: return@rememberLauncherForActivityResult
+        val fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "trade-import.csv"
+        tradeViewModel.importCsv(fileName, csv)
+    }
 
     if (!signedIn) {
         LoginScreen { role ->
@@ -190,10 +202,11 @@ private fun TradeJournalApp() {
                     Box(Modifier.weight(1f)) {
                         when (screen) {
                             AppScreen.HOME -> UserHome(trades, onAddTrade = { showAddTrade = true }, onOpenAnalysis = { selectScreen(AppScreen.ANALYSIS) })
-                            AppScreen.JOURNAL -> JournalScreen(trades, onAddTrade = { showAddTrade = true })
+                            AppScreen.JOURNAL -> JournalScreen(trades, onAddTrade = { showAddTrade = true }, onOpenImports = { selectScreen(AppScreen.IMPORTS) })
                             AppScreen.ANALYSIS -> AnalysisScreen(trades)
                             AppScreen.ACCOUNTS -> AccountsScreen(accounts)
                             AppScreen.DIARY -> DiaryScreen(diaryNotes, onSave = tradeViewModel::addDiaryNote)
+                            AppScreen.IMPORTS -> ImportScreen(importRecords, importStatus, onPickCsv = { csvPicker.launch("text/*") })
                             AppScreen.ADMIN_HOME -> AdminHome()
                             AppScreen.ADMIN_USERS -> AdminUsers()
                             AppScreen.ADMIN_REPORTS -> AdminReports()
@@ -284,6 +297,7 @@ private fun SideNavigation(
             if (role == Role.USER) {
                 NavItem("⌂", "Home", AppScreen.HOME, screen, onScreenChange)
                 NavItem("▤", "Journal", AppScreen.JOURNAL, screen, onScreenChange)
+                NavItem("⇩", "Imports", AppScreen.IMPORTS, screen, onScreenChange)
                 NavItem("◔", "Analysis", AppScreen.ANALYSIS, screen, onScreenChange)
                 NavItem("◎", "Accounts", AppScreen.ACCOUNTS, screen, onScreenChange)
                 Text("IMPROVE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(top = 14.dp))
@@ -429,14 +443,28 @@ private fun TradeRow(trade: Trade) {
 private fun InsightCard(title: String, body: String, icon: String, positive: Boolean) { Card { Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(30.dp), shape = RoundedCornerShape(9.dp), color = if (positive) MaterialTheme.colorScheme.secondary.copy(alpha = .13f) else Color(0xFFFFF0E0)) { Box(contentAlignment = Alignment.Center) { Text(icon, color = if (positive) MaterialTheme.colorScheme.secondary else Color(0xFFB87416), fontWeight = FontWeight.Bold) } }; Column(Modifier.padding(start = 10.dp)) { Text(title, fontWeight = FontWeight.Bold); Text(body, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)) } } } }
 
 @Composable
-private fun JournalScreen(trades: List<Trade>, onAddTrade: () -> Unit) {
+private fun JournalScreen(trades: List<Trade>, onAddTrade: () -> Unit, onOpenImports: () -> Unit) {
     LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ScreenHeading("Journal", "Search, tag, and review every decision behind the result.", "＋ Add trade", onAddTrade) }
+        item { ScreenHeading("Journal", "Search, tag, and review every decision behind the result.", "Import CSV", onOpenImports) }
         item { Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) { FilterChip(selected = true, onClick = {}, label = { Text("All trades") }); FilterChip(selected = false, onClick = {}, label = { Text("Winners") }); FilterChip(selected = false, onClick = {}, label = { Text("Losers") }); FilterChip(selected = false, onClick = {}, label = { Text("Needs review") }) } }
         item { Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp), tonalElevation = 1.dp) { Column(Modifier.padding(vertical = 5.dp)) { trades.forEach { TradeRow(it) } } } }
         item { Card { Column(Modifier.padding(18.dp)) { Text("March calendar", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("12 winning days · 6 losing days · best day +$470", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp)); Spacer(Modifier.height(12.dp)); Text("Mon   Tue   Wed   Thu   Fri   Sat   Sun", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp); Text("  2✓     3       4       5−     6       7✓     8", modifier = Modifier.padding(top = 10.dp), color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold); Text("  9      10✓    11      12−    13      14✓    15", modifier = Modifier.padding(top = 9.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold) } } }
     }
 }
+
+@Composable
+private fun ImportScreen(records: List<ImportRecord>, status: String?, onPickCsv: () -> Unit) {
+    LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { ScreenHeading("Import trades", "Bring broker CSV files into the local journal with validation and duplicate protection.", "Choose CSV", onPickCsv) }
+        item { Card { Column(Modifier.padding(18.dp)) { Text("CSV import workflow", fontWeight = FontWeight.Bold, fontSize = 17.sp); Text("Your file is parsed locally and is not uploaded to the backend.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp)); Spacer(Modifier.height(14.dp)); Text("Required columns", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp); Text("symbol/ticker and pnl/profit/result", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp)); Text("Optional columns", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.padding(top = 13.dp)); Text("market, direction/side, setup/strategy, and r/r-multiple", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(top = 5.dp)); status?.let { Surface(color = MaterialTheme.colorScheme.secondary.copy(alpha = .12f), shape = RoundedCornerShape(12.dp), modifier = Modifier.padding(top = 14.dp)) { Text(it, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, modifier = Modifier.padding(11.dp)) } }; Button(onClick = onPickCsv, modifier = Modifier.padding(top = 16.dp)) { Text("Select CSV file") } } } }
+        item { SectionHeader("Import history", "Local only") }
+        if (records.isEmpty()) item { InsightCard("No imports yet", "Choose a broker CSV to create your first import record.", "⇩", true) }
+        items(records, key = { it.id }) { record -> ImportRecordRow(record) }
+    }
+}
+
+@Composable
+private fun ImportRecordRow(record: ImportRecord) { Card { Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Surface(Modifier.size(34.dp), shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer) { Box(contentAlignment = Alignment.Center) { Text("CSV", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 9.sp) } }; Column(Modifier.weight(1f).padding(horizontal = 10.dp)) { Text(record.fileName, fontWeight = FontWeight.Bold); Text("${record.importedCount} imported · ${record.skippedCount} skipped", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp) }; Text("Local", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold, fontSize = 11.sp) } } }
 
 @Composable
 private fun AnalysisScreen(trades: List<Trade>) {
