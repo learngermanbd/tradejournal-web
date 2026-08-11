@@ -2,6 +2,12 @@
 
 TradeJournal is moving from an Android-first prototype to a responsive web application and installable Progressive Web App. The existing HTML prototypes remain in the repository as product and visual references.
 
+## Current implementation
+
+The first web foundation is now scaffolded in `src/`: a responsive user dashboard, separate community dashboard, protected admin dashboard shell, cloud boundary interfaces, role-aware navigation, theme toggle, mobile layout, and PWA app-shell registration. The dashboard uses representative data until the Worker API and Supabase session boundary are connected; private journal data is never treated as browser storage.
+
+Run locally with `npm install`, then `npm run dev`. Validate with `npm run typecheck` and `npm run build`.
+
 ## Product direction
 
 The web app must work well on phones, tablets, laptops, and large monitors. It should be installable as a PWA and remain reachable online, while only caching the app shell and temporary request state in the browser.

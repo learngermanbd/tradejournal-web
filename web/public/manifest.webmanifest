@@ -1,0 +1,10 @@
+{
+  "name": "JournalEdge",
+  "short_name": "JournalEdge",
+  "description": "Journal every trade. Sharpen your edge.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#4059d7",
+  "icons": []
+}
