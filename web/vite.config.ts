@@ -12,7 +12,6 @@ export default defineConfig({
         home: 'index.html',
         app: 'app.html',
         marketing: 'marketing.html',
-        preview: 'preview-all-pages.html',
       },
     },
   },
