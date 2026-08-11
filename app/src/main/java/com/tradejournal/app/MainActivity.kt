@@ -203,7 +203,6 @@ private fun TradeJournalApp() {
 
 @Composable
 private fun LoginScreen(onLogin: (Role) -> Unit) {
-    var adminMode by rememberSaveable { mutableStateOf(false) }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
@@ -218,35 +217,23 @@ private fun LoginScreen(onLogin: (Role) -> Unit) {
                 Box(contentAlignment = Alignment.Center) { Text("↗", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold) }
             }
             Text("TradeJournal", fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 14.dp))
-            Text(if (adminMode) "Secure admin access" else "Your edge, measured", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+            Text("Your edge, measured", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
             Card(Modifier.fillMaxWidth().padding(top = 24.dp), shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = !adminMode, onClick = { adminMode = false; error = null }, label = { Text("User sign in") })
-                        FilterChip(selected = adminMode, onClick = { adminMode = true; error = null }, label = { Text("Admin sign in") })
-                    }
                     OutlinedTextField(value = email, onValueChange = { email = it; error = null }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     OutlinedTextField(value = password, onValueChange = { password = it; error = null }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    if (adminMode) {
-                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(12.dp)) {
-                            Text("Development demo only: admin@tradejournal.dev / AdminDemo123!", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(11.dp))
-                        }
-                    }
                     error?.let { Text(it, color = Color(0xFFC64D5C), fontSize = 12.sp) }
                     Button(
                         onClick = {
-                            if (adminMode) {
-                                if (email.trim() == DEMO_ADMIN_EMAIL && password == DEMO_ADMIN_PASSWORD) onLogin(Role.ADMIN)
-                                else error = "Invalid admin credentials."
-                            } else if (email.isNotBlank() && password.length >= 4) {
-                                onLogin(Role.USER)
-                            } else {
-                                error = "Enter an email and a password with at least 4 characters."
+                            when {
+                                email.trim() == DEMO_ADMIN_EMAIL && password == DEMO_ADMIN_PASSWORD -> onLogin(Role.ADMIN)
+                                email.isNotBlank() && password.length >= 4 -> onLogin(Role.USER)
+                                else -> error = "Enter a valid email and password."
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(if (adminMode) "Open admin panel" else "Sign in") }
-                    Text("Production will replace this demo gate with Firebase/Auth provider verification and an admin role claim.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                    ) { Text("Sign in") }
+                    Text("Your account is verified securely before the workspace opens.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
                 }
             }
         }
