@@ -8,7 +8,9 @@ This directory contains the free-first backend for the JournalEdge web/PWA. It i
 
 - authenticated Supabase session checks
 - encrypted R2 trade vault reads and writes
-- server-side trade validation and P&L/risk calculations
+- server-side trade validation and P&L/risk/ROI calculations
+
+ROI is calculated as `net P&L / deployed capital × 100`. Deployed capital is `entry price × quantity / leverage`; when leverage is omitted, it defaults to 1x.
 - delete-by-owner trade operations
 - server-side profile settings updates
 - protected aggregate admin metrics

@@ -69,7 +69,7 @@ Only the marketing website and intentionally published community content may be 
 ## Core implementation boundaries
 
 - `storage`: Cloudflare R2 encrypted vault objects, attachment objects, and server-side schema migrations
-- `calculations`: validated Worker-side P&L, risk, reward, and R-multiple formulas with frontend previews
+- `calculations`: validated Worker-side P&L, risk, reward, R-multiple, and ROI formulas with frontend previews; ROI is net P&L divided by deployed capital (entry value ÷ leverage)
 - `auth`: Supabase session handling and role verification
 - `sync`: encrypted vault export/import and conflict resolution
 - `integrations`: R2, market quote adapter, read-only brokers, billing, AI consent, and monitoring

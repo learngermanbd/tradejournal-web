@@ -12,6 +12,7 @@ export interface TradeInput {
   stopLoss?: number
   takeProfit?: number
   fees?: number
+  leverage?: number
   currency?: string
   strategy?: string
   notes?: string
@@ -27,6 +28,7 @@ export interface Trade extends Required<Pick<TradeInput, 'symbol' | 'market' | '
   stopLoss?: number
   takeProfit?: number
   fees: number
+  leverage: number
   currency: string
   strategy: string
   notes: string
@@ -37,6 +39,8 @@ export interface Trade extends Required<Pick<TradeInput, 'symbol' | 'market' | '
   pnl?: number
   risk?: number
   reward?: number
+  deployedCapital?: number
+  roiPercent?: number
   rMultiple?: number
   createdAt: string
   updatedAt: string
@@ -58,18 +62,22 @@ export function validateTrade(input: TradeInput): ValidationResult {
   if (input.stopLoss !== undefined && !positive(input.stopLoss)) errors.stopLoss = 'Stop loss must be greater than zero.'
   if (input.takeProfit !== undefined && !positive(input.takeProfit)) errors.takeProfit = 'Take profit must be greater than zero.'
   if (input.fees !== undefined && (!Number.isFinite(input.fees) || input.fees < 0)) errors.fees = 'Fees cannot be negative.'
+  if (input.leverage !== undefined && (!Number.isFinite(input.leverage) || input.leverage <= 0)) errors.leverage = 'Leverage must be greater than zero.'
   if (input.side === 'long' && input.stopLoss !== undefined && input.stopLoss >= input.entryPrice) errors.stopLoss = 'A long stop loss must be below entry.'
   if (input.side === 'short' && input.stopLoss !== undefined && input.stopLoss <= input.entryPrice) errors.stopLoss = 'A short stop loss must be above entry.'
   return { valid: Object.keys(errors).length === 0, errors }
 }
 
-export function calculateTrade(input: Pick<TradeInput, 'side' | 'quantity' | 'entryPrice' | 'exitPrice' | 'stopLoss' | 'takeProfit' | 'fees'>) {
+export function calculateTrade(input: Pick<TradeInput, 'side' | 'quantity' | 'entryPrice' | 'exitPrice' | 'stopLoss' | 'takeProfit' | 'fees' | 'leverage'>) {
   const fees = input.fees ?? 0
+  const leverage = input.leverage ?? 1
   const move = input.exitPrice === undefined ? undefined : (input.side === 'long' ? input.exitPrice - input.entryPrice : input.entryPrice - input.exitPrice)
   const pnl = move === undefined ? undefined : round(move * input.quantity - fees)
   const risk = input.stopLoss === undefined ? undefined : round(Math.abs(input.entryPrice - input.stopLoss) * input.quantity)
   const reward = input.takeProfit === undefined ? undefined : round(Math.abs(input.takeProfit - input.entryPrice) * input.quantity)
-  return { pnl, risk, reward, rMultiple: pnl !== undefined && risk && risk > 0 ? round(pnl / risk, 4) : undefined }
+  const deployedCapital = round(input.entryPrice * input.quantity / leverage)
+  const roiPercent = pnl === undefined || deployedCapital <= 0 ? undefined : round(pnl / deployedCapital * 100, 4)
+  return { pnl, risk, reward, roiPercent, deployedCapital, rMultiple: pnl !== undefined && risk && risk > 0 ? round(pnl / risk, 4) : undefined }
 }
 
 export function createTrade(input: TradeInput, id = crypto.randomUUID(), now = new Date().toISOString()): Trade {
@@ -87,6 +95,7 @@ export function createTrade(input: TradeInput, id = crypto.randomUUID(), now = n
     stopLoss: input.stopLoss,
     takeProfit: input.takeProfit,
     fees: input.fees ?? 0,
+    leverage: input.leverage ?? 1,
     currency: input.currency ?? 'USD',
     strategy: input.strategy?.trim() ?? '',
     notes: input.notes?.trim() ?? '',

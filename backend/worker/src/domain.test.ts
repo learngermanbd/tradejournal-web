@@ -3,13 +3,14 @@ import { calculateTrade, createTrade, validateTrade } from './domain'
 
 describe('trade calculations', () => {
   it('calculates a long trade P&L, risk, reward, and R multiple', () => {
-    const result = calculateTrade({ side: 'long', quantity: 10, entryPrice: 100, exitPrice: 115, stopLoss: 95, takeProfit: 120, fees: 5 })
-    expect(result).toEqual({ pnl: 145, risk: 50, reward: 200, rMultiple: 2.9 })
+    const result = calculateTrade({ side: 'long', quantity: 10, entryPrice: 100, exitPrice: 115, stopLoss: 95, takeProfit: 120, fees: 5, leverage: 1 })
+    expect(result).toEqual({ pnl: 145, risk: 50, reward: 200, roiPercent: 14.5, deployedCapital: 1000, rMultiple: 2.9 })
   })
 
   it('calculates a short loss after fees', () => {
-    const result = calculateTrade({ side: 'short', quantity: 2, entryPrice: 100, exitPrice: 108, fees: 4 })
+    const result = calculateTrade({ side: 'short', quantity: 2, entryPrice: 100, exitPrice: 108, fees: 4, leverage: 2 })
     expect(result.pnl).toBe(-20)
+    expect(result.roiPercent).toBe(-20)
   })
 
   it('rejects invalid directional stops', () => {
@@ -18,7 +19,7 @@ describe('trade calculations', () => {
   })
 
   it('normalizes and creates an open trade when no exit exists', () => {
-    const trade = createTrade({ symbol: ' nvda ', market: 'stocks', side: 'long', quantity: 2, entryPrice: 100 }, '00000000-0000-4000-8000-000000000001', '2026-08-11T00:00:00.000Z')
+    const trade = createTrade({ symbol: ' nvda ', market: 'stocks', side: 'long', quantity: 2, entryPrice: 100, leverage: 1 }, '00000000-0000-4000-8000-000000000001', '2026-08-11T00:00:00.000Z')
     expect(trade.symbol).toBe('NVDA')
     expect(trade.status).toBe('open')
     expect(trade.pnl).toBeUndefined()
