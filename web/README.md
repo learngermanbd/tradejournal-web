@@ -1,6 +1,6 @@
 # TradeJournal Web / PWA
 
-TradeJournal is moving from an Android-first prototype to a responsive web application and installable Progressive Web App. The existing HTML prototypes remain in the repository as product and visual references.
+TradeJournal is moving from an Android-first prototype to a responsive web application and installable Progressive Web App. The existing HTML prototypes remain in the repository as product and visual references. Open `preview-all-pages.html` directly to inspect the interactive marketing, user, community, market, and admin page map without starting the React app.
 
 ## Current implementation
 

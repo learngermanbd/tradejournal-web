@@ -5,16 +5,19 @@ import { signIn, signUp, type AuthSession } from './auth'
 import { previewTrade, type TradeInput, type TradeMarket, type TradeSide } from './trade'
 
 type Area = 'user' | 'community' | 'admin'
-type UserView = 'overview' | 'journal' | 'analysis' | 'market' | 'accounts' | 'settings'
-type CommunityView = 'overview' | 'discover' | 'groups' | 'members' | 'guidelines'
-type AdminView = 'overview' | 'users' | 'features' | 'operations'
+type UserView = 'overview' | 'journal' | 'imports' | 'analysis' | 'market' | 'accounts' | 'diary' | 'reports' | 'settings'
+type CommunityView = 'overview' | 'discover' | 'groups' | 'members' | 'post' | 'sharing' | 'guidelines'
+type AdminView = 'overview' | 'users' | 'features' | 'content' | 'integrations' | 'billing' | 'community' | 'operations' | 'audit'
 
 const userNav: Array<[UserView, string, string]> = [
   ['overview', 'Overview', '⌂'],
   ['journal', 'Journal', '▤'],
+  ['imports', 'Imports', '⇩'],
   ['analysis', 'Analysis', '◔'],
   ['market', 'Market', '⌁'],
   ['accounts', 'Accounts', '◎'],
+  ['diary', 'Diary & goals', '✎'],
+  ['reports', 'Reports', '▦'],
   ['settings', 'Settings', '⚙'],
 ]
 
@@ -23,6 +26,8 @@ const communityNav: Array<[CommunityView, string, string]> = [
   ['discover', 'Discover', '◉'],
   ['groups', 'Groups', '♧'],
   ['members', 'Members', '♙'],
+  ['post', 'New post', '＋'],
+  ['sharing', 'Sharing', '↗'],
   ['guidelines', 'Guidelines', '✓'],
 ]
 
@@ -30,7 +35,12 @@ const adminNav: Array<[AdminView, string, string]> = [
   ['overview', 'Overview', '⌂'],
   ['users', 'Users', '♙'],
   ['features', 'Features', '◆'],
+  ['content', 'Content CMS', '▣'],
+  ['integrations', 'Providers', '⌁'],
+  ['billing', 'Billing', '$'],
+  ['community', 'Community', '◉'],
   ['operations', 'Operations', '▥'],
+  ['audit', 'Audit & security', '≡'],
 ]
 
 function App() {
@@ -132,9 +142,12 @@ function Brand() {
 
 function UserDashboard({ view, onAddTrade }: { view: UserView; onAddTrade: () => void }) {
   if (view === 'journal') return <Workspace title="Journal" description="Record every decision with cloud-saved context." action="＋ New trade" onAction={onAddTrade}><DataTable rows={['NVDA · Long · Breakout', 'EUR/USD · Short · Reversal', 'BTC/USDT · Long · Momentum', 'ESM6 · Short · Failed break']} /></Workspace>
+  if (view === 'imports') return <Workspace title="Imports" description="Preview, map, reconcile, and approve external records." action="＋ Import CSV"><DataTable rows={['Interactive Brokers · 42 rows · 4 warnings', 'Binance · 18 rows · Ready to approve', 'Manual template · Saved privately']} /></Workspace>
   if (view === 'analysis') return <Workspace title="Analysis" description="Turn cloud-saved records into an honest review." action="March 2026"><BarChart title="Strategy performance" rows={['Breakout · +$890 · 66%', 'Reversal · +$210 · 42%', 'Momentum · +$145 · 50%', 'Support · +$108 · 60%']} /></Workspace>
   if (view === 'market') return <MarketDashboard />
   if (view === 'accounts') return <Workspace title="Accounts" description="Manage live, paper, demo, and prop-firm accounts." action="＋ Connect account"><DataTable rows={['Main account · Interactive Brokers · Live', 'Crypto account · Binance · Live', 'Practice account · Manual · Paper']} /></Workspace>
+  if (view === 'diary') return <Workspace title="Diary & goals" description="Track plans, psychology, habits, review streaks, and process goals." action="＋ New reflection"><MetricGrid metrics={[{ label: 'Review streak', value: '12 days', detail: 'Best: 18 days', tone: 'positive' }, { label: 'Plan adherence', value: '78%', detail: '+9% this month', tone: 'blue' }, { label: 'Goals', value: '4/6', detail: 'On track', tone: 'positive' }, { label: 'Private notes', value: '28', detail: 'Encrypted in R2', tone: 'warning' }]} /></Workspace>
+  if (view === 'reports') return <Workspace title="Reports & exports" description="Generate performance, tax, coach, PDF, CSV, Excel, and JSON reports." action="＋ Generate report"><DataTable rows={['March performance · PDF · Private', 'Tax-lot export 2026 · CSV · FIFO', 'Coach review · Watermarked · Expires in 14 days']} /></Workspace>
   if (view === 'settings') return <Workspace title="Settings" description="Update your cloud-saved workspace settings and security." action="Save settings"><SettingsCard /></Workspace>
   return <Workspace title="Performance snapshot" description="Your decisions, measured with context." action="Full analysis →"><MetricGrid metrics={userMetrics} /><div className="content-grid"><ChartCard /><ReviewCard /></div><DataTable rows={['NVDA · +$240 · Plan followed', 'EUR/USD · −$85 · Moved stop', 'BTC/USDT · +$216 · Calm']} /></Workspace>
 }
@@ -198,6 +211,8 @@ function CommunityDashboard({ view }: { view: CommunityView }) {
   if (view === 'discover') return <Workspace title="Discover" description="Explore public strategies, education, and conversations." action="Search community"><BarChart title="Trending public topics" rows={['Risk management · 2.4k views', 'Options playbooks · 1.8k views', 'Trading psychology · 1.2k views', 'Market review · 940 views']} /></Workspace>
   if (view === 'groups') return <Workspace title="Groups" description="Find private, public, and mentor-led spaces." action="＋ Create group"><DataTable rows={['Risk discipline challenge · Public · 184 members', 'Options Lab · Private · 42 members', 'Coach workspace · Invite-only · 8 members']} /></Workspace>
   if (view === 'members') return <Workspace title="Members" description="Connect with traders while keeping sharing permission-based." action="Invite a mentor"><DataTable rows={['Avery Chen · Coach · Public profile', 'Maya Singh · Options trader · Public profile', 'Jordan Lee · Member · Follows you']} /></Workspace>
+  if (view === 'post') return <Workspace title="New public post" description="Choose public, group, or private visibility before sharing." action="Publish post"><SettingsCard /></Workspace>
+  if (view === 'sharing') return <Workspace title="Sharing center" description="Review access, expiration, view history, watermarks, and revoke controls." action="Review access log"><DataTable rows={['Coach workspace · Trades view-only · 14 days', 'Risk group · Strategy comment access', 'Public profile · Bio only · No journal data']} /></Workspace>
   if (view === 'guidelines') return <Workspace title="Guidelines" description="A focused, respectful community for better process—not financial advice." action="Read full policy"><Card title="Community safety"><div className="privacy-large"><strong>Private by default.</strong><span>Public posts are indexable only when the author chooses. Trades, P&L, psychology, messages, and private groups remain uncrawlable and ad-free.</span></div></Card></Workspace>
   return <Workspace title="Community" description="Learn, share, and sharpen your edge with other traders." action="＋ New public post"><MetricGrid metrics={communityStats} /><div className="content-grid"><Card title="Public community activity"><div className="activity-list"><Activity title="Options playbook" detail="Public education · 2.4k views" /><Activity title="Risk discipline challenge" detail="Public group · 184 participants" /><Activity title="Market psychology AMA" detail="Sponsored education · clearly labeled" /></div></Card><Card title="Community monetization"><div className="revenue"><strong>$2,480</strong><span>Public contextual ad revenue this month</span><div className="progress"><i style={{ width: '68%' }} /></div><small>68% of monthly target · private spaces remain ad-free</small></div></Card></div><DataTable rows={['Public strategy library · Indexed by Google', 'Trading psychology discussion · Public', 'Private mentor workspace · Members only']} /></Workspace>
 }
@@ -205,7 +220,12 @@ function CommunityDashboard({ view }: { view: CommunityView }) {
 function AdminDashboard({ view }: { view: AdminView }) {
   if (view === 'users') return <Workspace title="Users" description="Manage account metadata without exposing private journals." action="Invite admin"><DataTable rows={['Alex Kim · Premium · Active', 'Maya Singh · Free · Active', 'Jordan Lee · Trial · Review']} /></Workspace>
   if (view === 'features') return <Workspace title="Features and plans" description="Control free, premium, community, ads, and rollout entitlements." action="＋ Add feature"><FeatureTable /></Workspace>
+  if (view === 'content') return <Workspace title="Content CMS" description="Manage help, education, legal, onboarding, announcements, and translations." action="＋ New content"><DataTable rows={['Getting started guide · Published · 8 languages', 'Options education · Draft · Needs review', 'Privacy policy v3 · Published · Consent active']} /></Workspace>
+  if (view === 'integrations') return <Workspace title="Providers" description="Manage market data, brokers, email, payments, AI, calendars, and storage." action="＋ Add provider"><DataTable rows={['Cloudflare R2 · Primary vault · Healthy', 'Market data · Manual fallback · No key configured', 'Transactional email · Healthy · Test delivery']} /></Workspace>
+  if (view === 'billing') return <Workspace title="Billing" description="Manage plans, invoices, refunds, retries, taxes, coupons, and webhooks." action="＋ Create plan"><MetricGrid metrics={[{ label: 'MRR', value: '$18,240', detail: '+9.2%', tone: 'positive' }, { label: 'Premium users', value: '214', detail: '8.7% conversion', tone: 'blue' }, { label: 'Failed payments', value: '7', detail: 'Retry queue', tone: 'warning' }, { label: 'Refunds', value: '$420', detail: 'This month', tone: 'warning' }]} /></Workspace>
+  if (view === 'community') return <Workspace title="Community moderation" description="Protect public content, contextual ads, indexing, reports, and private spaces." action="Open moderation queue"><DataTable rows={['Reports queue · 14 reports · 3 need review', 'Public ad consent · 96% coverage', 'Sponsored content · 2 awaiting disclosure']} /></Workspace>
   if (view === 'operations') return <Workspace title="Operations" description="Monitor services, storage, monetization, and incidents." action="Open status page"><BarChart title="Service health" rows={['Cloudflare Workers · Operational', 'Cloudflare R2 · Operational', 'Supabase Auth · Operational', 'Community ads · Consent healthy']} /></Workspace>
+  if (view === 'audit') return <Workspace title="Audit & security" description="Review security events, admin changes, consent, support access, and retention." action="Export audit log"><DataTable rows={['Role changed · Billing admin added · 2 minutes ago', 'Feature changed · AI paused · 1 hour ago', 'Support access · Expired · Yesterday']} /></Workspace>
   return <Workspace title="Admin overview" description="Aggregate operations for JournalEdge services." action="Export report"><MetricGrid metrics={adminMetrics} /><div className="content-grid"><Card title="Service health"><Activity title="Cloudflare R2 vaults" detail="Operational · 99.98% availability" /><Activity title="Community monetization" detail="Contextual ads only · 96% consent coverage" /><Activity title="Auth and roles" detail="Operational · no open security incident" /></Card><Card title="Privacy boundary"><div className="privacy-large"><strong>Private content is excluded.</strong><span>Admin dashboards receive aggregate metrics, billing metadata, service events, and audit records—not private trades, notes, or psychology.</span></div></Card></div></Workspace>
 }
 
