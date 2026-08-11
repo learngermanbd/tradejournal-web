@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="JournalEdge web application plan and architecture blueprint.">
+  <title>JournalEdge — Web App Plan & Architecture</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #edf2f8;
+      --line: #dce5f0;
+      --text: #142033;
+      --muted: #687790;
+      --blue: #4059d7;
+      --blue-soft: #e9edff;
+      --teal: #008b72;
+      --teal-soft: #e3f8f2;
+      --orange: #b87516;
+      --orange-soft: #fff3dc;
+      --red: #c64d5c;
+      --red-soft: #fff0f2;
+      --shadow: 0 16px 42px rgba(31, 47, 80, .08);
+      --radius: 18px;
+    }
+    [data-theme="dark"] {
+      --bg: #0e1420;
+      --surface: #171f2e;
+      --surface-2: #202b3e;
+      --line: #2b3a51;
+      --text: #edf2fb;
+      --muted: #a1aec2;
+      --blue: #a2afff;
+      --blue-soft: #252e60;
+      --teal: #5bd5bd;
+      --teal-soft: #153f3a;
+      --orange: #f3bc65;
+      --orange-soft: #49371e;
+      --red: #ff929e;
+      --red-soft: #482431;
+      --shadow: 0 18px 52px rgba(0,0,0,.22);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--text); background: var(--bg); font: 14px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button { font: inherit; cursor: pointer; }
+    a { color: inherit; }
+    .shell { max-width: 1460px; margin: auto; padding: 22px clamp(17px, 4vw, 58px) 64px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 48px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: #fff; background: linear-gradient(145deg, #4059d7, #6d82ff); font-weight: 900; font-size: 24px; box-shadow: 0 9px 22px rgba(64,89,215,.24); }
+    .brand strong { display: block; font-size: 18px; letter-spacing: -.04em; }
+    .brand span { display: block; color: var(--muted); font-size: 11px; }
+    .actions { display: flex; gap: 8px; }
+    .button { min-height: 39px; padding: 0 13px; border: 1px solid var(--line); border-radius: 11px; color: var(--text); background: var(--surface); font-weight: 750; }
+    .button:hover { border-color: var(--blue); color: var(--blue); }
+    .hero { display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 34px; margin-bottom: 28px; }
+    .eyebrow { color: var(--blue); font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: .12em; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { max-width: 760px; margin-top: 10px; font-size: clamp(34px, 5.3vw, 66px); line-height: 1.01; letter-spacing: -.07em; }
+    h2 { font-size: 23px; letter-spacing: -.04em; }
+    h3 { font-size: 14px; letter-spacing: -.015em; }
+    .hero-copy p { max-width: 690px; color: var(--muted); font-size: 16px; margin-top: 17px; }
+    .hero-copy .pill-row { margin-top: 22px; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    .pill { display: inline-flex; align-items: center; padding: 6px 9px; border-radius: 999px; background: var(--blue-soft); color: var(--blue); font-size: 11px; font-weight: 800; }
+    .hero-card { padding: 20px; border: 1px solid var(--line); border-radius: 25px; background: var(--surface); box-shadow: var(--shadow); }
+    .hero-card h2 { font-size: 18px; }
+    .hero-card p { color: var(--muted); font-size: 12px; margin-top: 5px; }
+    .flow { display: grid; gap: 8px; margin-top: 17px; }
+    .flow-node { padding: 13px; border: 1px solid var(--line); border-left: 4px solid var(--blue); border-radius: 12px; background: var(--surface-2); font-weight: 800; }
+    .flow-node small { display: block; color: var(--muted); font-weight: 600; font-size: 10px; margin-top: 2px; }
+    .flow-node.local { border-left-color: var(--teal); }
+    .flow-node.cloud { border-left-color: var(--orange); }
+    .arrow { text-align: center; color: var(--blue); font-weight: 900; }
+    .section { margin-top: 36px; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+    .section-head p { max-width: 700px; color: var(--muted); font-size: 12px; margin-top: 5px; }
+    .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .info { padding: 18px; }
+    .info .icon { width: 33px; height: 33px; display: grid; place-items: center; border-radius: 11px; background: var(--blue-soft); color: var(--blue); font-weight: 900; margin-bottom: 12px; }
+    .info p { color: var(--muted); font-size: 11px; margin-top: 6px; }
+    .info ul { color: var(--muted); margin: 10px 0 0; padding-left: 17px; font-size: 11px; }
+    .lane { padding: 18px; }
+    .lane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+    .lane-head span { color: var(--muted); font-size: 10px; }
+    .lane-body { display: grid; gap: 8px; margin-top: 14px; }
+    .lane-item { padding: 11px 12px; border-radius: 11px; background: var(--surface-2); }
+    .lane-item strong { font-size: 12px; }
+    .lane-item p { color: var(--muted); font-size: 10px; margin-top: 2px; }
+    .boundary { margin-top: 12px; padding: 12px; border: 1px dashed var(--red); border-radius: 11px; background: var(--red-soft); color: var(--red); font-size: 11px; }
+    .tabs { display: flex; gap: 5px; overflow-x: auto; padding: 4px; border-radius: 12px; background: var(--surface-2); }
+    .tab { border: 0; padding: 9px 13px; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 750; white-space: nowrap; }
+    .tab.active { color: var(--blue); background: var(--surface); box-shadow: 0 2px 8px rgba(20,32,51,.08); }
+    .panel { display: none; padding: 17px 0 0; }
+    .panel.active { display: block; }
+    .matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .matrix th, .matrix td { border-bottom: 1px solid var(--line); padding: 12px 13px; text-align: left; vertical-align: top; }
+    .matrix th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .matrix td small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .tag { display: inline-flex; padding: 4px 7px; border-radius: 99px; color: var(--blue); background: var(--blue-soft); font-size: 10px; font-weight: 800; }
+    .tag.green { color: var(--teal); background: var(--teal-soft); }
+    .tag.orange { color: var(--orange); background: var(--orange-soft); }
+    .tag.red { color: var(--red); background: var(--red-soft); }
+    .code { overflow-x: auto; padding: 19px; border-radius: var(--radius); background: #121a2a; color: #d9e4ff; font: 12px/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .roadmap { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .phase { padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
+    .phase-no { color: var(--blue); font-size: 10px; font-weight: 900; letter-spacing: .1em; }
+    .phase h3 { margin-top: 7px; }
+    .phase p { color: var(--muted); font-size: 11px; margin-top: 5px; }
+    .status { display: inline-flex; margin-top: 11px; padding: 4px 8px; border-radius: 99px; background: var(--orange-soft); color: var(--orange); font-size: 10px; font-weight: 800; }
+    .status.ready { background: var(--teal-soft); color: var(--teal); }
+    .checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 25px; padding: 18px 21px; }
+    .check { display: flex; gap: 9px; color: var(--muted); font-size: 12px; }
+    .check::before { content: "✓"; flex: 0 0 20px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--teal-soft); color: var(--teal); font-weight: 900; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; flex-wrap: wrap; color: var(--muted); font-size: 11px; margin-top: 46px; padding-top: 18px; border-top: 1px solid var(--line); }
+    @media (max-width: 1050px) { .hero { grid-template-columns: 1fr; } .grid-4 { grid-template-columns: repeat(2, 1fr); } .roadmap { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 700px) { .shell { padding-top: 16px; } .topbar { margin-bottom: 32px; } .actions .button:first-child { display: none; } .section-head { display: block; } .grid-2, .grid-3, .grid-4, .roadmap, .checklist { grid-template-columns: 1fr; } .matrix { min-width: 650px; } .card:has(.matrix) { overflow-x: auto; } h1 { font-size: 40px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><div class="logo">↗</div><div><strong>JournalEdge</strong><span>Journal every trade. Sharpen your edge.</span></div></div>
+      <div class="actions"><button class="button" onclick="window.print()">Print plan</button><button class="button" id="theme">◐ Theme</button></div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Web application master plan</div>
+        <h1>A cloud-first trading workspace for every level of trader.</h1>
+        <p>JournalEdge combines a professional trading journal, complete market analysis, options workflows, cloud storage, broker integrations, AI insights, and a protected admin control plane while keeping access and privacy explicit.</p>
+        <div class="pill-row"><span class="pill">Cloud-first</span><span class="pill">Free-first infrastructure</span><span class="pill">User + Admin apps</span><span class="pill">All major markets</span><span class="pill">PWA</span></div>
+      </div>
+      <aside class="hero-card">
+        <h2>Three-domain deployment</h2>
+        <p>Separate public content, user data, and privileged operations.</p>
+        <div class="flow"><div class="flow-node">Marketing website<small>https://learngermanwith.fun/</small></div><div class="arrow">↓</div><div class="flow-node local">JournalEdge user app<small>https://app.learngermanwith.fun/</small></div><div class="arrow">↓ role claim only</div><div class="flow-node cloud">Admin panel<small>https://admin.learngermanwith.fun/</small></div></div>
+      </aside>
+    </section>
+
+    <section class="section"><div class="section-head"><div><h2>Product boundary</h2><p>The user application and admin application share a brand system, but not permissions.</p></div></div><div class="grid-2"><article class="card lane"><div class="lane-head"><strong>User application</strong><span>private workspace</span></div><div class="lane-body"><div class="lane-item"><strong>Journal and trade lifecycle</strong><p>Manual, CSV, OCR, broker sync, partial fills, multiple exits, and status history.</p></div><div class="lane-item"><strong>Analysis and risk</strong><p>P&amp;L, R multiple, drawdown, position sizing, options payoff, backtesting, and goals.</p></div><div class="lane-item"><strong>Cloud account</strong><p>Settings, backups, alerts, reports, sharing, subscriptions, and recovery.</p></div></div></article><article class="card lane"><div class="lane-head"><strong>Admin application</strong><span>protected control plane</span></div><div class="lane-body"><div class="lane-item"><strong>Feature and plan control</strong><p>Mark features free or premium, manage limits, themes, logos, providers, and rollout flags.</p></div><div class="lane-item"><strong>Operations and support</strong><p>Service health, status page, incidents, tickets, content, audit logs, and temporary consented support.</p></div><div class="boundary"><strong>Privacy boundary:</strong> admins cannot browse private trades, notes, psychology, screenshots, or balances by default.</div></div></article></div></section>
+
+    <section class="section"><div class="section-head"><div><h2>Cloud-first architecture</h2><p>Saved data goes to the cloud. The browser may hold only temporary in-memory state or a short-lived cache.</p></div></div><div class="card" style="padding:18px"><div class="grid-3"><article class="info"><div class="icon">01</div><h3>Cloudflare Pages</h3><p>Hosts the responsive React/TypeScript PWA and marketing pages.</p></article><article class="info"><div class="icon">02</div><h3>Cloudflare Workers</h3><p>Always-reachable API boundary, signed storage URLs, rate limits, webhooks, AI consent, and admin aggregates.</p></article><article class="info"><div class="icon">03</div><h3>Supabase</h3><p>Auth and PostgreSQL for profiles, settings, roles, subscriptions, feature flags, sync metadata, and audit logs.</p></article><article class="info"><div class="icon">04</div><h3>Cloudflare R2</h3><p>Encrypted monthly journal chunks, attachments, snapshots, and recovery manifests.</p></article><article class="info"><div class="icon">05</div><h3>External providers</h3><p>Broker, market data, payment, email, calendar, AI, and monitoring adapters remain replaceable.</p></article><article class="info"><div class="icon">06</div><h3>Security boundary</h3><p>Private data is encrypted before upload; service secrets never enter browser code.</p></article></div></div></section>
+
+    <section class="section"><div class="section-head"><div><h2>Storage map</h2><p>Structured control data and private journal objects have different responsibilities.</p></div></div><div class="card" style="overflow:hidden"><table class="matrix"><thead><tr><th>Data</th><th>Primary location</th><th>Protection</th><th>Admin access</th></tr></thead><tbody><tr><td>Profiles, settings, roles</td><td>Supabase PostgreSQL</td><td><span class="tag green">RLS</span></td><td>Metadata only</td></tr><tr><td>Trades and journal</td><td>Encrypted R2 monthly chunks</td><td><span class="tag red">Client encrypted</span></td><td>Not readable</td></tr><tr><td>Attachments</td><td>Encrypted R2 objects</td><td><span class="tag red">Signed URLs</span></td><td>Consent only</td></tr><tr><td>Subscriptions and payments</td><td>Supabase + provider webhooks</td><td><span class="tag orange">Server verified</span></td><td>Billing role</td></tr><tr><td>Audit and service events</td><td>Supabase PostgreSQL</td><td><span class="tag green">Immutable policy</span></td><td>Authorized admins</td></tr></tbody></table></div></section>
+
+    <section class="section"><div class="section-head"><div><h2>Core user capabilities</h2><p>Advanced features progressively reveal as the user moves from beginner to professional mode.</p></div></div><div class="tabs" role="tablist"><button class="tab active" data-panel="journal" role="tab">Journal</button><button class="tab" data-panel="markets" role="tab">Markets</button><button class="tab" data-panel="analysis" role="tab">Analysis</button><button class="tab" data-panel="community" role="tab">Community</button></div><div class="panel active" id="panel-journal"><div class="grid-4"><article class="card info"><div class="icon">J</div><h3>Trade lifecycle</h3><p>Orders, fills, partial entries, partial exits, adjustments, fees, taxes, and immutable source records.</p></article><article class="card info"><div class="icon">N</div><h3>Notes and psychology</h3><p>Plans, reflections, emotions, voice notes, screenshots, documents, and private sharing.</p></article><article class="card info"><div class="icon">⇩</div><h3>Imports and sync</h3><p>CSV, OCR, broker APIs, preview, reconciliation, templates, normalization, and duplicate protection.</p></article><article class="card info"><div class="icon">⚙</div><h3>Settings</h3><p>Language, currency, timezone, security, storage, notifications, payments, and consent controls.</p></article></div></div><div class="panel" id="panel-markets"><div class="grid-4"><article class="card info"><div class="icon">◎</div><h3>All markets</h3><p>Stocks, ETFs, forex, crypto, futures, options, commodities, indices, CFDs, bonds, and custom instruments.</p></article><article class="card info"><div class="icon">O</div><h3>Options builder</h3><p>Calls, puts, Greeks, expiries, multi-leg spreads, straddles, strangles, iron condors, and payoff charts.</p></article><article class="card info"><div class="icon">◈</div><h3>Paper trading</h3><p>Simulated trades, real-time paper accounts, replay, competitions, and privacy-protected leaderboards.</p></article><article class="card info"><div class="icon">◌</div><h3>Market data</h3><p>Free providers first, delayed/live labels, historical prices, news, economic calendar, and fallback providers.</p></article></div></div><div class="panel" id="panel-analysis"><div class="grid-4"><article class="card info"><div class="icon">↗</div><h3>Performance</h3><p>P&amp;L, expectancy, profit factor, equity, win rate, drawdown, and multi-currency conversion.</p></article><article class="card info"><div class="icon">!</div><h3>Risk</h3><p>Position sizing, risk limits, exposure, correlation, scenario analysis, and automated alerts.</p></article><article class="card info"><div class="icon">AI</div><h3>AI insights</h3><p>Local rules and multiple cloud providers with consent, minimized data, and no trade execution.</p></article><article class="card info"><div class="icon">▦</div><h3>Reports</h3><p>CSV, Excel, PDF, JSON, tax lots, FIFO/LIFO, fiscal periods, and accountant exports.</p></article></div></div><div class="panel" id="panel-community"><div class="grid-4"><article class="card info"><div class="icon">◉</div><h3>Coaching</h3><p>Private mentor access, selected-item sharing, comments, review dashboards, and expiry controls.</p></article><article class="card info"><div class="icon">#</div><h3>Groups</h3><p>Teams, private groups, aggregate analysis, custom permissions, and opt-in public sharing.</p></article><article class="card info"><div class="icon">↗</div><h3>Safety</h3><p>Watermarks, expiring links, password protection, view history, and download controls.</p></article><article class="card info"><div class="icon">✓</div><h3>Consent</h3><p>Every shared item has a scope, expiration, audit entry, and immediate revoke action.</p></article></div></div></section>
+
+    <section class="section"><div class="section-head"><div><h2>Admin control system</h2><p>Admin controls are backend-enforced and never trusted to browser UI alone.</p></div></div><div class="card" style="padding:18px"><pre class="code">User login → Supabase Auth session → Worker verifies JWT → role claim checked
+                                                        ↓
+Normal user → /dashboard, /journal, /analysis, /settings
+Admin user  → same user routes + protected /admin routes
+                                                        ↓
+Admin changes feature flag → audit event → entitlement cache → user sees updated access
+
+Admin never receives:
+  private journal plaintext · psychology · screenshots · broker secrets · recovery keys</pre></div></section>
+
+    <section class="section"><div class="section-head"><div><h2>Implementation roadmap</h2><p>Each phase will be independently testable and pushed to the renamed GitHub repository.</p></div></div><div class="roadmap"><article class="phase"><div class="phase-no">PHASE 01</div><h3>Web foundation</h3><p>React/TypeScript PWA, design system, routing, domains, themes, service worker, and CI.</p><span class="status">Next</span></article><article class="phase"><div class="phase-no">PHASE 02</div><h3>Cloud journal</h3><p>Worker API, R2 vault chunks, Supabase settings, trade lifecycle, accounts, diary, and calculations.</p><span class="status">Planned</span></article><article class="phase"><div class="phase-no">PHASE 03</div><h3>Auth and admin</h3><p>All major sign-in methods, MFA, roles, feature flags, content management, audit, and support.</p><span class="status">Planned</span></article><article class="phase"><div class="phase-no">PHASE 04</div><h3>Trading ecosystem</h3><p>Broker adapters, market data, options, paper trading, backtesting, alerts, news, and calendars.</p><span class="status">Planned</span></article><article class="phase"><div class="phase-no">PHASE 05</div><h3>Launch and scale</h3><p>Payments, AI, community, localization, compliance, disaster recovery, monitoring, and rollout.</p><span class="status">Planned</span></article></div></section>
+
+    <section class="section"><div class="section-head"><div><h2>Definition of done</h2><p>JournalEdge is ready for public launch when these conditions are met.</p></div></div><div class="card"><div class="checklist"><div class="check">Cloud-saved user data with encrypted private journal vaults</div><div class="check">Supabase RLS and Worker-enforced authorization</div><div class="check">Normal users cannot see any admin trace</div><div class="check">Admin actions and role changes are audited</div><div class="check">Automatic encrypted multi-device synchronization</div><div class="check">Newest-change-wins version recovery</div><div class="check">All major markets and complete options support</div><div class="check">Accessible, localized, responsive PWA</div><div class="check">Free-first deployment with quota monitoring</div><div class="check">User export, deletion, and recovery controls</div><div class="check">Public status page and incident workflow</div><div class="check">Private alpha before public free beta</div></div></div></section>
+
+    <footer class="footer"><span>JournalEdge · Journal every trade. Sharpen your edge.</span><span>Web-first plan · cloud-first storage · user and admin applications</span></footer>
+  </div>
+  <script>
+    const themeButton = document.getElementById('theme');
+    themeButton.addEventListener('click', () => {
+      const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.body.dataset.theme = next;
+      localStorage.setItem('journaledge-plan-theme', next);
+    });
+    const savedTheme = localStorage.getItem('journaledge-plan-theme');
+    if (savedTheme) document.body.dataset.theme = savedTheme;
+    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(item => item.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`panel-${tab.dataset.panel}`).classList.add('active');
+    }));
+  </script>
+</body>
+</html>
