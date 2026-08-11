@@ -4,14 +4,14 @@ TradeJournal is moving from an Android-first prototype to a responsive web appli
 
 ## Product direction
 
-The web app must work well on phones, tablets, laptops, and large monitors. It should be installable as a PWA and remain useful offline for the journal's private data.
+The web app must work well on phones, tablets, laptops, and large monitors. It should be installable as a PWA and remain reachable online, while only caching the app shell and temporary request state in the browser.
 
 ```text
 Browser / installed PWA
   ├─ responsive user workspace
-  ├─ IndexedDB private journal vault
-  ├─ local calculations and CSV imports
-  └─ optional encrypted Google Drive backup
+  ├─ in-memory forms and short-lived cache only
+  ├─ cloud calculations and CSV processing
+  └─ encrypted cloud journal storage
 
 Supabase control plane
   ├─ authentication and sessions
@@ -24,9 +24,20 @@ Supabase control plane
 
 ## Privacy boundary
 
-IndexedDB stores trades, entries/exits, stop loss, take profit, P&L, notes, psychology, and screenshots locally. The app must encrypt the vault before an optional Drive backup. Supabase must not receive raw journal content by default.
+Saved trades, entries/exits, stop loss, take profit, P&L, notes, psychology, and screenshots go to cloud services. Private journal chunks and attachments are encrypted before Cloudflare R2 upload. Supabase stores control-plane data; it must not receive raw private journal content by default.
 
 The backend stores only control-plane metadata. Admins can see aggregate operational data after a verified role claim, but cannot browse private trades or journal notes.
+
+## Public domain layout
+
+```text
+https://learngermanwith.fun/          marketing website
+https://app.learngermanwith.fun/      user application
+https://community.learngermanwith.fun/ community application
+https://admin.learngermanwith.fun/    protected admin application
+```
+
+The community application shares authentication and branding with the user app but has separate navigation, moderation controls, sharing permissions, and community data boundaries.
 
 ## Planned application routes
 
@@ -40,6 +51,7 @@ The backend stores only control-plane metadata. Admins can see aggregate operati
 /accounts
 /diary
 /settings
+/community                # separate community domain/application
 /admin                    # route is unavailable to normal users
 /admin/users
 /admin/reports
@@ -57,10 +69,10 @@ The backend stores only control-plane metadata. Admins can see aggregate operati
 
 ## Web-first build phases
 
-1. **Foundation** — TypeScript PWA shell, responsive design system, routing, and service worker.
-2. **Private journal** — IndexedDB, trade CRUD, detailed entry form, automatic calculations, accounts, diary, settings, CSV imports, and duplicate detection.
-3. **Authentication** — Supabase email login, password recovery, session persistence, and server-verified admin roles.
-4. **Cloud controls** — encrypted Google Drive backup, sync metadata, conflict review, and backend admin overview.
+1. **Foundation** — TypeScript PWA shell, responsive design system, routing, service worker, and SaaS dashboard shell.
+2. **Cloud journal** — Worker API, encrypted R2 vault chunks, trade CRUD, calculations, accounts, diary, settings, CSV imports, and duplicate detection.
+3. **Authentication** — Supabase email login, password recovery, session persistence, MFA, and server-verified admin roles.
+4. **Cloud controls** — R2 versioning, encrypted Google Drive backup, sync metadata, conflict review, and backend admin overview.
 5. **Integrations** — read-only broker adapters, subscriptions, notifications, privacy-safe AI, and monitoring.
 6. **Release** — accessibility, localization, security review, browser matrix, PWA install testing, Cloudflare Pages deployment, and CI.
 
@@ -75,7 +87,7 @@ The backend stores only control-plane metadata. Admins can see aggregate operati
 
 ## Definition of done
 
-- Offline journal works without network access.
+- The PWA shell loads quickly and queues safe requests when connectivity briefly drops; saved data remains cloud-backed.
 - A normal user sees no admin navigation or admin route content.
 - Admin access requires a backend-issued role claim.
 - Trade calculations are shared and covered by automated tests.
