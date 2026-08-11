@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="TradeJournal application architecture: Android client, privacy-first storage, backend, and admin control plane.">
+  <title>TradeJournal — Application Architecture</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: #fff;
+      --surface-2: #eef2f8;
+      --line: #dfe6f1;
+      --text: #172033;
+      --muted: #69768d;
+      --primary: #4059d7;
+      --primary-soft: #edf0ff;
+      --teal: #008b72;
+      --teal-soft: #e4f7f2;
+      --orange: #b87416;
+      --orange-soft: #fff5e4;
+      --red: #c64d5c;
+      --red-soft: #fff0f2;
+      --shadow: 0 18px 48px rgba(31, 45, 80, .09);
+      --radius: 20px;
+    }
+    [data-theme="dark"] {
+      --bg: #101521;
+      --surface: #171e2d;
+      --surface-2: #1d2637;
+      --line: #2b374c;
+      --text: #edf1fa;
+      --muted: #9ca8bc;
+      --primary: #9ba8ff;
+      --primary-soft: #252d59;
+      --teal: #5bd5bd;
+      --teal-soft: #163d3b;
+      --orange: #f3bb64;
+      --orange-soft: #44341c;
+      --red: #ff8f9d;
+      --red-soft: #452432;
+      --shadow: 0 18px 50px rgba(0,0,0,.24);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--text); background: var(--bg); font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button { font: inherit; cursor: pointer; }
+    .shell { max-width: 1450px; margin: auto; padding: 28px clamp(18px, 4vw, 56px) 60px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 46px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 42px; height: 42px; border-radius: 14px; color: #fff; background: linear-gradient(145deg, #4059d7, #7183ff); display: grid; place-items: center; font-size: 23px; font-weight: 900; box-shadow: 0 10px 22px rgba(64,89,215,.26); }
+    .brand strong { display: block; font-size: 17px; letter-spacing: -.03em; }
+    .brand span { display: block; color: var(--muted); font-size: 11px; }
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+    .button { border: 1px solid var(--line); color: var(--text); background: var(--surface); border-radius: 11px; min-height: 40px; padding: 0 13px; font-weight: 750; }
+    .button:hover { border-color: var(--primary); color: var(--primary); }
+    .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 34px; align-items: center; margin-bottom: 30px; }
+    .eyebrow { color: var(--primary); font-size: 11px; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
+    h1 { font-size: clamp(32px, 5vw, 58px); line-height: 1.02; letter-spacing: -.065em; margin: 10px 0 16px; max-width: 700px; }
+    h2 { font-size: 22px; letter-spacing: -.035em; margin: 0; }
+    h3 { font-size: 14px; margin: 0; }
+    p { margin: 0; }
+    .hero p { max-width: 630px; color: var(--muted); font-size: 16px; }
+    .hero-diagram { min-height: 250px; position: relative; padding: 20px; border: 1px solid var(--line); border-radius: 26px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+    .hero-diagram::before, .hero-diagram::after { content: ""; position: absolute; border-radius: 50%; filter: blur(2px); opacity: .35; }
+    .hero-diagram::before { width: 180px; height: 180px; right: -55px; top: -70px; background: var(--primary-soft); }
+    .hero-diagram::after { width: 130px; height: 130px; left: -45px; bottom: -50px; background: var(--teal-soft); }
+    .mini-flow { position: relative; z-index: 1; display: grid; gap: 10px; align-items: center; }
+    .mini-node { padding: 13px 15px; border-radius: 13px; border: 1px solid var(--line); background: var(--surface-2); font-weight: 750; display: flex; justify-content: space-between; gap: 10px; }
+    .mini-node span { color: var(--muted); font-weight: 600; font-size: 11px; }
+    .mini-arrow { color: var(--primary); text-align: center; font-weight: 900; }
+    .section { margin-top: 30px; }
+    .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 14px; }
+    .section-heading p { color: var(--muted); max-width: 620px; font-size: 12px; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 11px; }
+    .legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-right: 5px; }
+    .legend .local::before { background: var(--teal); }
+    .legend .cloud::before { background: var(--orange); }
+    .legend .private::before { background: var(--red); }
+    .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+    .architecture { padding: 20px; overflow-x: auto; }
+    .lanes { min-width: 900px; display: grid; grid-template-columns: 1.1fr 1.15fr 1fr; gap: 16px; align-items: stretch; }
+    .lane { border: 1px solid var(--line); border-radius: 17px; padding: 15px; background: var(--surface-2); }
+    .lane-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+    .lane-head strong { font-size: 14px; }
+    .lane-head span { color: var(--muted); font-size: 10px; }
+    .node-stack { display: grid; gap: 9px; }
+    .node { position: relative; padding: 12px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); }
+    .node h3 { font-size: 12px; }
+    .node p { color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .node.local { border-left: 4px solid var(--teal); }
+    .node.cloud { border-left: 4px solid var(--orange); }
+    .node.private { border-left: 4px solid var(--red); }
+    .node.primary { border-left: 4px solid var(--primary); }
+    .connector { color: var(--primary); text-align: center; font-weight: 900; padding: 1px; }
+    .boundary { margin-top: 15px; padding: 12px; border: 1px dashed var(--red); border-radius: 13px; background: var(--red-soft); color: var(--red); font-size: 11px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; }
+    .info-card { padding: 17px; }
+    .info-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: var(--primary-soft); color: var(--primary); font-weight: 900; margin-bottom: 13px; }
+    .info-card p { color: var(--muted); font-size: 11px; margin-top: 6px; }
+    .flow-tabs { display: flex; gap: 5px; padding: 4px; overflow-x: auto; border-radius: 13px; background: var(--surface-2); margin-bottom: 14px; }
+    .flow-tab { border: 0; border-radius: 9px; padding: 9px 13px; color: var(--muted); background: transparent; font-weight: 750; white-space: nowrap; }
+    .flow-tab.active { color: var(--primary); background: var(--surface); box-shadow: 0 2px 9px rgba(31,45,80,.08); }
+    .flow-panel { display: none; padding: 20px; }
+    .flow-panel.active { display: block; }
+    .flow-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; align-items: stretch; }
+    .flow-step { min-height: 130px; position: relative; padding: 16px; border: 1px solid var(--line); background: var(--surface); }
+    .flow-step:first-child { border-radius: 15px 0 0 15px; }
+    .flow-step:last-child { border-radius: 0 15px 15px 0; }
+    .step-number { width: 23px; height: 23px; display: grid; place-items: center; background: var(--primary); color: #fff; border-radius: 50%; font-size: 11px; font-weight: 850; margin-bottom: 12px; }
+    .flow-step p { color: var(--muted); font-size: 11px; margin-top: 5px; }
+    .flow-step:not(:last-child)::after { content: "→"; position: absolute; z-index: 2; right: -10px; top: calc(50% - 12px); width: 20px; height: 24px; display: grid; place-items: center; color: var(--primary); background: var(--surface); font-weight: 900; }
+    .tree-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    pre { margin: 0; padding: 20px; min-height: 280px; overflow: auto; border-radius: var(--radius); background: #121827; color: #dbe4ff; font: 12px/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .tree-note { padding: 20px; }
+    .tree-note p { color: var(--muted); font-size: 12px; margin-top: 9px; }
+    .tree-note ul { color: var(--muted); padding-left: 18px; font-size: 12px; line-height: 1.9; }
+    .phases { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .phase { padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
+    .phase-number { color: var(--primary); font-size: 11px; font-weight: 900; }
+    .phase h3 { margin-top: 7px; }
+    .phase p { color: var(--muted); font-size: 11px; margin-top: 5px; }
+    .status { display: inline-flex; margin-top: 11px; padding: 4px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; background: var(--primary-soft); color: var(--primary); }
+    .status.done { background: var(--teal-soft); color: var(--teal); }
+    .footer { margin-top: 42px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; gap: 15px; flex-wrap: wrap; }
+    @media (max-width: 1050px) { .hero { grid-template-columns: 1fr; } .grid-4 { grid-template-columns: repeat(2, 1fr); } .phases { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 700px) { .shell { padding-top: 18px; } .topbar { margin-bottom: 30px; } .top-actions .button:first-child { display: none; } .hero { gap: 20px; } h1 { font-size: 38px; } .grid-4, .tree-grid, .phases { grid-template-columns: 1fr; } .section-heading { display: block; } .section-heading p { margin-top: 5px; } .flow-steps { grid-template-columns: 1fr; gap: 8px; } .flow-step, .flow-step:first-child, .flow-step:last-child { min-height: auto; border-radius: 13px; } .flow-step:not(:last-child)::after { content: "↓"; right: calc(50% - 10px); top: auto; bottom: -17px; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><div class="logo">↗</div><div><strong>TradeJournal architecture</strong><span>How the Android app, backend, and data boundaries fit together</span></div></div>
+      <div class="top-actions"><button class="button" onclick="window.print()">Print plan</button><button class="button" id="theme">◐ Theme</button></div>
+    </header>
+
+    <section class="hero">
+      <div><div class="eyebrow">Application blueprint</div><h1>A private trading workspace with a secure control plane.</h1><p>The Android client keeps journal data local by default. The backend manages identity, roles, subscriptions, integrations, and aggregate service health without exposing private trade notes.</p></div>
+      <div class="hero-diagram"><div class="mini-flow"><div class="mini-node">Android app <span>Compose + SQLite</span></div><div class="mini-arrow">↓ local by default</div><div class="mini-node">Private trade vault <span>device + optional Drive</span></div><div class="mini-arrow">↓ control plane only</div><div class="mini-node">Backend server <span>Auth + admin + services</span></div></div></div>
+    </section>
+
+    <section class="section"><div class="section-heading"><div><h2>System architecture</h2><p>Three lanes separate user experience, private data, and cloud services. The boundary is intentional.</p></div><div class="legend"><span class="local">Local/private</span><span class="cloud">Cloud service</span><span class="private">Restricted boundary</span></div></div><div class="card architecture"><div class="lanes">
+      <div class="lane"><div class="lane-head"><strong>Android user app</strong><span>runs on phone / tablet / foldable</span></div><div class="node-stack"><div class="node primary"><h3>Compose UI</h3><p>Adaptive Home, Journal, Analysis, Accounts, Diary, Settings</p></div><div class="connector">↓</div><div class="node primary"><h3>ViewModels + use cases</h3><p>Validation, calculations, monthly reports, UI state</p></div><div class="connector">↓</div><div class="node local"><h3>TradeRepository</h3><p>Single boundary for local data, imports, sync, and future adapters</p></div><div class="connector">↓</div><div class="node local"><h3>SQLite trade store</h3><p>Trade history, P&amp;L, notes, psychology, attachments</p></div></div></div>
+      <div class="lane"><div class="lane-head"><strong>Privacy boundary</strong><span>user-controlled data</span></div><div class="node-stack"><div class="node local"><h3>Encrypted local vault</h3><p>Default location for trade details and journal notes</p></div><div class="connector">⇄ optional</div><div class="node local"><h3>Google Drive app data</h3><p>Encrypted backup, restore, and two-way sync only after consent</p></div><div class="boundary"><strong>Admin cannot browse this by default.</strong><br>Trade notes, screenshots, psychology, and raw history stay private.</div><div class="node private"><h3>Android Keystore</h3><p>Protects local encryption keys and broker credentials</p></div></div></div>
+      <div class="lane"><div class="lane-head"><strong>Backend control plane</strong><span>Firebase + Cloud Run/Functions</span></div><div class="node-stack"><div class="node cloud"><h3>Firebase Auth</h3><p>Email, Google, Apple, phone OTP, guest upgrade</p></div><div class="connector">↓</div><div class="node cloud"><h3>Firestore profiles</h3><p>Settings, role claims, subscription and sync metadata</p></div><div class="connector">↓</div><div class="node cloud"><h3>Cloud Functions / API</h3><p>Admin actions, webhooks, broker adapters, AI consent checks</p></div><div class="connector">↓</div><div class="node cloud"><h3>Admin console</h3><p>Aggregate users, service health, audit log, feature flags</p></div></div></div>
+    </div></div></section>
+
+    <section class="section"><div class="section-heading"><div><h2>What each layer owns</h2><p>Keeping responsibilities narrow makes the app easier to secure, test, and scale.</p></div></div><div class="grid-4"><article class="card info-card"><div class="info-icon">01</div><h3>Android client</h3><p>Forms, navigation, local calculations, offline journaling, accessibility, notifications, and user-controlled sync.</p></article><article class="card info-card"><div class="info-icon">02</div><h3>Private data layer</h3><p>Trades, notes, emotions, screenshots, accounts, and reports. Stored locally and encrypted before any backup.</p></article><article class="card info-card"><div class="info-icon">03</div><h3>Backend server</h3><p>Identity, role enforcement, billing, broker secrets, cloud AI consent, webhooks, and operational metadata.</p></article><article class="card info-card"><div class="info-icon">04</div><h3>Admin area</h3><p>Aggregate-only monitoring. Every privileged action is authenticated, authorized, and audit logged.</p></article></div></section>
+
+    <section class="section"><div class="section-heading"><div><h2>Data flows</h2><p>Choose a flow to see what happens when a user records, syncs, imports, or analyzes a trade.</p></div></div><div class="card" style="overflow:hidden"><div class="flow-tabs"><button class="flow-tab active" data-flow="manual">Manual trade</button><button class="flow-tab" data-flow="drive">Google Drive</button><button class="flow-tab" data-flow="broker">Broker sync</button><button class="flow-tab" data-flow="ai">Cloud AI</button></div><div class="flow-panel active" id="flow-manual"><div class="flow-steps"><div class="flow-step"><div class="step-number">1</div><h3>User enters trade</h3><p>Symbol, market, prices, risk, setup, notes, and psychology.</p></div><div class="flow-step"><div class="step-number">2</div><h3>Validate locally</h3><p>Required fields, market-specific values, and safe numeric calculations.</p></div><div class="flow-step"><div class="step-number">3</div><h3>Save locally</h3><p>SQLite stores the journal entry. The backend is not involved.</p></div><div class="flow-step"><div class="step-number">4</div><h3>Analyze locally</h3><p>P&amp;L, expectancy, drawdown, strategy, and psychology patterns update.</p></div></div></div><div class="flow-panel" id="flow-drive"><div class="flow-steps"><div class="flow-step"><div class="step-number">1</div><h3>User grants consent</h3><p>The app requests access to a private Google Drive application-data folder.</p></div><div class="flow-step"><div class="step-number">2</div><h3>Encrypt locally</h3><p>The journal vault and attachments are encrypted before leaving the device.</p></div><div class="flow-step"><div class="step-number">3</div><h3>Sync changes</h3><p>Versioned changes upload/download with unique IDs and tombstones.</p></div><div class="flow-step"><div class="step-number">4</div><h3>Resolve conflicts</h3><p>The user chooses the local version, Drive version, or a manual merge.</p></div></div></div><div class="flow-panel" id="flow-broker"><div class="flow-steps"><div class="flow-step"><div class="step-number">1</div><h3>Connect read-only</h3><p>User authorizes a broker or uploads a CSV when direct sync is unavailable.</p></div><div class="flow-step"><div class="step-number">2</div><h3>Secure adapter</h3><p>The API adapter normalizes symbols, fills, fees, currencies, and market fields.</p></div><div class="flow-step"><div class="step-number">3</div><h3>Detect duplicates</h3><p>Stable broker IDs and timestamps prevent the same fill being imported twice.</p></div><div class="flow-step"><div class="step-number">4</div><h3>Review and save</h3><p>The user sees a preview and confirms the import into the local journal.</p></div></div></div><div class="flow-panel" id="flow-ai"><div class="flow-steps"><div class="flow-step"><div class="step-number">1</div><h3>Local analysis first</h3><p>Metrics and rule-based patterns run without sending data anywhere.</p></div><div class="flow-step"><div class="step-number">2</div><h3>Ask for cloud AI</h3><p>The user explicitly opts in and sees what information will be shared.</p></div><div class="flow-step"><div class="step-number">3</div><h3>Minimize data</h3><p>Send only the selected date range and necessary, anonymized context.</p></div><div class="flow-step"><div class="step-number">4</div><h3>Return insight</h3><p>The app labels AI output as analysis, never financial advice.</p></div></div></div></div></section>
+
+    <section class="section"><div class="section-heading"><div><h2>Recommended project structure</h2><p>The current Android project is the beginning of this structure. The backend is the next separate service.</p></div></div><div class="tree-grid"><pre>tradejournal/
+├── app/                              # Android client
+│   └── src/main/java/com/tradejournal/app/
+│       ├── data/                    # SQLite, repositories, sync adapters
+│       ├── domain/                  # trade rules and analysis use cases
+│       ├── ui/                     # Compose screens and components
+│       ├── auth/                   # session and provider flows
+│       └── TradeJournalApplication.kt
+├── tradejournal-prototype.html      # UI prototype
+├── tradejournal-architecture.html   # this architecture map
+├── backend/                         # next service to add
+│   ├── functions/                  # auth hooks, billing, webhooks
+│   ├── api/                        # broker and AI endpoints
+│   ├── security/                   # roles, rules, audit policies
+│   └── firestore.rules
+└── docs/                            # product, privacy, and release plans</pre><div class="card tree-note"><div class="eyebrow">Important boundary</div><h2 style="margin-top:6px">The admin app is not the user app.</h2><p>They may share a design system, but production authorization must come from the backend.</p><ul><li>User role reads and writes only their own permitted resources.</li><li>Admin role reads aggregate metadata and operational records.</li><li>Broker secrets live behind a restricted service boundary.</li><li>Trade content stays local or in the user-controlled encrypted vault.</li><li>Every admin mutation gets an audit event.</li></ul><button class="button" onclick="document.getElementById('phases').scrollIntoView({behavior:'smooth'})">See build phases ↓</button></div></div></section>
+
+    <section class="section" id="phases"><div class="section-heading"><div><h2>Build phases</h2><p>Each phase produces a usable, testable increment instead of waiting for every integration.</p></div></div><div class="phases"><article class="phase"><div class="phase-number">PHASE 01</div><h3>Core client</h3><p>Compose UI, adaptive navigation, local SQLite, add trade, journal, and analysis.</p><span class="status done">Built</span></article><article class="phase"><div class="phase-number">PHASE 02</div><h3>Private data</h3><p>Accounts, diary notes, encryption, exports, migrations, and calculation tests.</p><span class="status">Next</span></article><article class="phase"><div class="phase-number">PHASE 03</div><h3>Identity + admin</h3><p>Firebase Auth, user profiles, admin claims, audit logs, and backend rules.</p><span class="status">Planned</span></article><article class="phase"><div class="phase-number">PHASE 04</div><h3>Sync + imports</h3><p>Google Drive vault, CSV mapping, duplicate detection, and broker adapters.</p><span class="status">Planned</span></article><article class="phase"><div class="phase-number">PHASE 05</div><h3>Premium services</h3><p>Subscriptions, cloud AI consent, notifications, monitoring, and release hardening.</p><span class="status">Planned</span></article></div></section>
+
+    <footer class="footer"><span>TradeJournal · privacy-first trading journal</span><span>English default · light/dark · adaptive screens · admin boundaries</span></footer>
+  </div>
+  <script>
+    const theme = document.getElementById('theme');
+    theme.addEventListener('click', () => {
+      const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.body.dataset.theme = next;
+      localStorage.setItem('tradejournal-architecture-theme', next);
+    });
+    const saved = localStorage.getItem('tradejournal-architecture-theme');
+    if (saved) document.body.dataset.theme = saved;
+    document.querySelectorAll('.flow-tab').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('.flow-tab').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll('.flow-panel').forEach(item => item.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`flow-${tab.dataset.flow}`).classList.add('active');
+    }));
+  </script>
+</body>
+</html>

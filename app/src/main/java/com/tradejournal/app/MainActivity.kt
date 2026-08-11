@@ -108,6 +108,10 @@ private fun TradeJournalTheme(content: @Composable () -> Unit) {
 private enum class Role { USER, ADMIN }
 private enum class AppScreen { HOME, JOURNAL, ANALYSIS, ACCOUNTS, DIARY, ADMIN_HOME, ADMIN_USERS, ADMIN_REPORTS }
 
+// Development-only demo credential. Production must use Firebase/Auth provider claims.
+private const val DEMO_ADMIN_EMAIL = "admin@tradejournal.dev"
+private const val DEMO_ADMIN_PASSWORD = "AdminDemo123!"
+
 private fun seedTrades() = listOf(
     Trade(symbol = "NVDA", market = "Stocks", direction = "Long", setup = "Breakout", result = 240.0, rMultiple = 2.4, status = "Plan followed"),
     Trade(symbol = "EUR/USD", market = "Forex", direction = "Short", setup = "Reversal", result = -85.0, rMultiple = -1.0, status = "Moved stop"),
@@ -118,12 +122,23 @@ private fun seedTrades() = listOf(
 
 @Composable
 private fun TradeJournalApp() {
+    var signedIn by rememberSaveable { mutableStateOf(false) }
     var roleName by rememberSaveable { mutableStateOf(Role.USER.name) }
     var screenName by rememberSaveable { mutableStateOf(AppScreen.HOME.name) }
     val application = androidx.compose.ui.platform.LocalContext.current.applicationContext as TradeJournalApplication
     val tradeViewModel: TradeViewModel = viewModel(factory = TradeViewModel.Factory(application.tradeRepository))
     val trades by tradeViewModel.trades.collectAsStateWithLifecycle()
     var showAddTrade by remember { mutableStateOf(false) }
+
+    if (!signedIn) {
+        LoginScreen { role ->
+            roleName = role.name
+            screenName = if (role == Role.ADMIN) AppScreen.ADMIN_HOME.name else AppScreen.HOME.name
+            signedIn = true
+        }
+        return
+    }
+
     val role = Role.valueOf(roleName)
     val screen = AppScreen.valueOf(screenName)
 
@@ -135,6 +150,13 @@ private fun TradeJournalApp() {
         screenName = next.name
     }
 
+    fun logout() {
+        signedIn = false
+        roleName = Role.USER.name
+        screenName = AppScreen.HOME.name
+        showAddTrade = false
+    }
+
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         BoxWithConstraints(
             modifier = Modifier
@@ -144,25 +166,10 @@ private fun TradeJournalApp() {
             val wideLayout = maxWidth >= 720.dp
             Row(Modifier.fillMaxSize()) {
                 if (wideLayout) {
-                    SideNavigation(
-                        role = role,
-                        screen = screen,
-                        onRoleChange = {
-                            roleName = it.name
-                            screenName = if (it == Role.ADMIN) AppScreen.ADMIN_HOME.name else AppScreen.HOME.name
-                        },
-                        onScreenChange = ::selectScreen,
-                    )
+                    SideNavigation(role = role, screen = screen, onScreenChange = ::selectScreen, onLogout = ::logout)
                 }
                 Column(Modifier.fillMaxSize()) {
-                    AppHeader(
-                        role = role,
-                        onRoleChange = {
-                            roleName = it.name
-                            screenName = if (it == Role.ADMIN) AppScreen.ADMIN_HOME.name else AppScreen.HOME.name
-                        },
-                        onAddTrade = { showAddTrade = true },
-                    )
+                    AppHeader(role = role, onLogout = ::logout, onAddTrade = { showAddTrade = true })
                     Box(Modifier.weight(1f)) {
                         when (screen) {
                             AppScreen.HOME -> UserHome(trades, onAddTrade = { showAddTrade = true }, onOpenAnalysis = { selectScreen(AppScreen.ANALYSIS) })
@@ -176,12 +183,7 @@ private fun TradeJournalApp() {
                         }
                     }
                     if (!wideLayout) {
-                        BottomNavigation(
-                            role = role,
-                            screen = screen,
-                            onScreenChange = ::selectScreen,
-                            onAddTrade = { showAddTrade = true },
-                        )
+                        BottomNavigation(role = role, screen = screen, onScreenChange = ::selectScreen, onAddTrade = { showAddTrade = true })
                     }
                 }
             }
@@ -200,11 +202,63 @@ private fun TradeJournalApp() {
 }
 
 @Composable
+private fun LoginScreen(onLogin: (Role) -> Unit) {
+    var adminMode by rememberSaveable { mutableStateOf(false) }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+
+    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Surface(Modifier.size(58.dp), shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.primary) {
+                Box(contentAlignment = Alignment.Center) { Text("↗", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold) }
+            }
+            Text("TradeJournal", fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 14.dp))
+            Text(if (adminMode) "Secure admin access" else "Your edge, measured", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+            Card(Modifier.fillMaxWidth().padding(top = 24.dp), shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !adminMode, onClick = { adminMode = false; error = null }, label = { Text("User sign in") })
+                        FilterChip(selected = adminMode, onClick = { adminMode = true; error = null }, label = { Text("Admin sign in") })
+                    }
+                    OutlinedTextField(value = email, onValueChange = { email = it; error = null }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    OutlinedTextField(value = password, onValueChange = { password = it; error = null }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    if (adminMode) {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(12.dp)) {
+                            Text("Development demo only: admin@tradejournal.dev / AdminDemo123!", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(11.dp))
+                        }
+                    }
+                    error?.let { Text(it, color = Color(0xFFC64D5C), fontSize = 12.sp) }
+                    Button(
+                        onClick = {
+                            if (adminMode) {
+                                if (email.trim() == DEMO_ADMIN_EMAIL && password == DEMO_ADMIN_PASSWORD) onLogin(Role.ADMIN)
+                                else error = "Invalid admin credentials."
+                            } else if (email.isNotBlank() && password.length >= 4) {
+                                onLogin(Role.USER)
+                            } else {
+                                error = "Enter an email and a password with at least 4 characters."
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(if (adminMode) "Open admin panel" else "Sign in") }
+                    Text("Production will replace this demo gate with Firebase/Auth provider verification and an admin role claim.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun SideNavigation(
     role: Role,
     screen: AppScreen,
-    onRoleChange: (Role) -> Unit,
     onScreenChange: (AppScreen) -> Unit,
+    onLogout: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.width(238.dp).fillMaxSize(),
@@ -242,7 +296,7 @@ private fun SideNavigation(
                     Text("Trading data stays on-device. Drive sync is optional.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
-            RoleSwitcher(role, onRoleChange)
+            SessionBadge(role, onLogout)
         }
     }
 }
@@ -287,32 +341,22 @@ private fun NavItem(icon: String, label: String, destination: AppScreen, selecte
 }
 
 @Composable
-private fun AppHeader(role: Role, onRoleChange: (Role) -> Unit, onAddTrade: () -> Unit) {
+private fun AppHeader(role: Role, onLogout: () -> Unit, onAddTrade: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) { Text(if (role == Role.USER) "Good morning, Alex" else "Admin control center", fontSize = 23.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp); Text(if (role == Role.USER) "Your decisions, measured with context." else "Monitor the product, users, and service health.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp)) }
-            if (role == Role.USER) {
-                AssistChip(onClick = onAddTrade, label = { Text("＋ Add trade") })
-            }
+            if (role == Role.USER) AssistChip(onClick = onAddTrade, label = { Text("＋ Add trade") })
             Spacer(Modifier.width(8.dp))
-            RoleSwitcher(role, onRoleChange)
+            SessionBadge(role, onLogout)
         }
     }
 }
 
 @Composable
-private fun RoleSwitcher(role: Role, onRoleChange: (Role) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)) { Text(if (role == Role.USER) "User ▾" else "Admin ▾", fontSize = 11.sp) }
-        if (expanded) {
-            Card(modifier = Modifier.width(130.dp).padding(top = 44.dp), elevation = CardDefaults.cardElevation(8.dp)) {
-                Column(Modifier.padding(6.dp)) {
-                    TextButton(onClick = { expanded = false; onRoleChange(Role.USER) }, modifier = Modifier.fillMaxWidth()) { Text("User app", modifier = Modifier.fillMaxWidth()) }
-                    TextButton(onClick = { expanded = false; onRoleChange(Role.ADMIN) }, modifier = Modifier.fillMaxWidth()) { Text("Admin app", modifier = Modifier.fillMaxWidth()) }
-                }
-            }
-        }
+private fun SessionBadge(role: Role, onLogout: () -> Unit) {
+    Column(horizontalAlignment = Alignment.End) {
+        Text(if (role == Role.ADMIN) "Admin session" else "User session", color = if (role == Role.ADMIN) Color(0xFFB87416) else MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        TextButton(onClick = onLogout, contentPadding = PaddingValues(0.dp)) { Text("Sign out", fontSize = 10.sp) }
     }
 }
 
