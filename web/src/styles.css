@@ -29,7 +29,17 @@ button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset
 .auth-card .brand { padding: 0 0 28px; }
 .auth-card h1 { margin: 10px 0 8px; color: var(--ink); font-size: 26px; letter-spacing: -.7px; }
 .auth-card > p { margin: 0 0 23px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.social-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.social-button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 37px; padding: 8px 7px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--surface); font-size: 10px; font-weight: 700; }
+.social-button:hover { border-color: var(--brand); color: var(--brand); background: var(--blue-soft); }
+.social-button b { width: 16px; color: var(--brand); font-size: 13px; }
+.social-button.telegram { grid-column: 1 / -1; color: #168bc4; }
+.social-button.telegram b { color: #168bc4; }
+.auth-divider { display: flex; align-items: center; gap: 10px; margin: 19px 0 14px; color: var(--muted); font-size: 9px; text-align: center; }
+.auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .auth-card form { display: grid; gap: 14px; }
+.provider-status { margin: 12px 0 0; }
+.provider-note { display: block; margin-top: 15px; color: var(--muted); font-size: 9px; line-height: 1.5; }
 .auth-card label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 700; }
 .auth-card input { padding: 11px 12px; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 7px; font: inherit; font-weight: 500; outline: none; }
 .auth-card input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(64, 89, 215, .11); }
@@ -204,5 +214,7 @@ button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset
   .workspace-heading { display: block; }
   .workspace-heading .secondary-button { margin-top: 14px; }
   .form-grid { grid-template-columns: 1fr; }
+  .social-grid { grid-template-columns: 1fr; }
+  .social-button.telegram { grid-column: auto; }
   .trade-modal { padding: 18px; }
 }

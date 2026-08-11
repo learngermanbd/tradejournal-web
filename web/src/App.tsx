@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { adminMetrics, userMetrics } from './dashboardData'
 import { ApiError, getQuote, saveTrade } from './api'
-import { signIn, signUp, type AuthSession } from './auth'
+import { getOAuthSession, signIn, signUp, startOAuth, type AuthSession, type OAuthProvider } from './auth'
 import { previewTrade, type TradeInput, type TradeMarket, type TradeSide } from './trade'
 
 type Area = 'user' | 'admin'
@@ -38,7 +38,7 @@ function App() {
   const [adminView, setAdminView] = useState<AdminView>('overview')
   const [dark, setDark] = useState(false)
   const [showTradeForm, setShowTradeForm] = useState(false)
-  const [session, setSession] = useState<AuthSession | null>(null)
+  const [session, setSession] = useState<AuthSession | null>(() => getOAuthSession())
 
   if (getRoute() === 'login' && !session) return <LoginScreen onSignedIn={setSession} />
 
@@ -90,10 +90,19 @@ function App() {
 
 function LoginScreen({ onSignedIn }: { onSignedIn: (session: AuthSession) => void }) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [providerMessage, setProviderMessage] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+
+  function handleOAuth(provider: OAuthProvider) {
+    try {
+      startOAuth(provider)
+    } catch (error) {
+      setProviderMessage(error instanceof Error ? error.message : 'Unable to start provider sign-in.')
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -113,7 +122,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (session: AuthSession) => voi
     }
   }
 
-  return <main className="auth-page"><div className="auth-card"><Brand /><span className="eyebrow">Secure cloud access</span><h1>{mode === 'signin' ? 'Welcome back' : 'Create your journal'}</h1><p>Trade records are stored in your encrypted cloud vault, not in browser storage.</p><form onSubmit={submit}><label>Email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label><label>Password<input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" /></label>{message && <div className="form-status">{message}</div>}<button className="primary-button auth-submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in securely' : 'Create account'}</button></form><button className="auth-switch" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>{mode === 'signin' ? 'Need an account? Create one' : 'Already registered? Sign in'}</button></div></main>
+  return <main className="auth-page"><div className="auth-card"><Brand /><span className="eyebrow">Secure cloud access</span><h1>{mode === 'signin' ? 'Welcome back' : 'Create your journal'}</h1><p>Trade records are stored in your encrypted cloud vault, not in browser storage.</p><div className="social-grid"><button className="social-button" onClick={() => handleOAuth('google')}><b>G</b> Google</button><button className="social-button" onClick={() => handleOAuth('apple')}><b>●</b> Apple</button><button className="social-button" onClick={() => handleOAuth('azure')}><b>▦</b> Microsoft</button><button className="social-button" onClick={() => handleOAuth('github')}><b>◆</b> GitHub</button><button className="social-button telegram" onClick={() => handleOAuth('telegram')}><b>➤</b> Telegram</button></div>{providerMessage && <div className="form-status provider-status">{providerMessage}</div>}<div className="auth-divider"><span>or use email</span></div><form onSubmit={submit}><label>Email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label><label>Password<input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" /></label>{message && <div className="form-status">{message}</div>}<button className="primary-button auth-submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in securely' : 'Create account'}</button></form><button className="auth-switch" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>{mode === 'signin' ? 'Need an account? Create one' : 'Already registered? Sign in'}</button><small className="provider-note">Google, Apple, Microsoft, and GitHub use Supabase OAuth. Telegram needs a verified bot authorization URL configured in the Worker environment.</small></div></main>
 }
 
 function Brand() {
