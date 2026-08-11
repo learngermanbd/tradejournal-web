@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import { adminMetrics, communityStats, userMetrics } from './dashboardData'
+import { ApiError, getQuote, saveTrade } from './api'
+import { signIn, signUp, type AuthSession } from './auth'
+import { previewTrade, type TradeInput, type TradeMarket, type TradeSide } from './trade'
 
 type Area = 'user' | 'community' | 'admin'
-type UserView = 'overview' | 'journal' | 'analysis' | 'accounts' | 'settings'
+type UserView = 'overview' | 'journal' | 'analysis' | 'market' | 'accounts' | 'settings'
 type CommunityView = 'overview' | 'discover' | 'groups' | 'members' | 'guidelines'
 type AdminView = 'overview' | 'users' | 'features' | 'operations'
 
@@ -10,6 +13,7 @@ const userNav: Array<[UserView, string, string]> = [
   ['overview', 'Overview', '⌂'],
   ['journal', 'Journal', '▤'],
   ['analysis', 'Analysis', '◔'],
+  ['market', 'Market', '⌁'],
   ['accounts', 'Accounts', '◎'],
   ['settings', 'Settings', '⚙'],
 ]
@@ -36,6 +40,10 @@ function App() {
   const [communityView, setCommunityView] = useState<CommunityView>('overview')
   const [adminView, setAdminView] = useState<AdminView>('overview')
   const [dark, setDark] = useState(false)
+  const [showTradeForm, setShowTradeForm] = useState(false)
+  const [session, setSession] = useState<AuthSession | null>(null)
+
+  if (window.location.pathname.startsWith('/login') && !session) return <LoginScreen onSignedIn={setSession} />
 
   const title = useMemo(() => {
     if (area === 'admin') return 'Admin control center'
@@ -73,32 +81,117 @@ function App() {
         <div className="sidebar-bottom">
           {area === 'community' && <div className="ad-note"><strong>Community monetization</strong><span>Public contextual ads only. Private areas stay ad-free.</span></div>}
           <div className="privacy-note"><strong>Cloud-first & encrypted</strong><span>Saved data is protected by Worker API and R2 vaults.</span></div>
-          <div className="account-chip"><span className="avatar">AK</span><span><strong>Alex Kim</strong><small>{area === 'admin' ? 'Super admin' : 'Premium plan'}</small></span></div>
+          <div className="account-chip"><span className="avatar">{session ? (session.user.email?.slice(0, 2).toUpperCase() ?? 'AK') : 'AK'}</span><span><strong>{session?.user.email ?? 'Alex Kim'}</strong><small>{area === 'admin' ? 'Super admin' : session ? 'Cloud session active' : 'Demo workspace'}</small></span></div>
         </div>
       </aside>
 
       <main className="main">
         <header className="topbar">
           <div className="heading"><span className="eyebrow">JournalEdge SaaS</span><h1>{title}</h1></div>
-          <div className="top-actions"><span className="domain-pill">{area === 'admin' ? 'admin.' : area === 'community' ? 'community.' : 'app.'}learngermanwith.fun</span><button className="icon-button" aria-label="Toggle theme" onClick={() => setDark(!dark)}>{dark ? '☀' : '◐'}</button><button className="icon-button" aria-label="Notifications">♢</button><button className="primary-button" onClick={() => setUserView('journal')}>＋ Add trade</button></div>
+          <div className="top-actions"><span className="domain-pill">{area === 'admin' ? 'admin.' : area === 'community' ? 'community.' : 'app.'}learngermanwith.fun</span><button className="icon-button" aria-label="Toggle theme" onClick={() => setDark(!dark)}>{dark ? '☀' : '◐'}</button><button className="icon-button" aria-label="Notifications">♢</button>{area === 'user' && <button className="primary-button" onClick={() => setShowTradeForm(true)}>＋ Add trade</button>}</div>
         </header>
 
-        {area === 'admin' ? <AdminDashboard view={adminView} /> : area === 'community' ? <CommunityDashboard view={communityView} /> : <UserDashboard view={userView} />}
+        {area === 'admin' ? <AdminDashboard view={adminView} /> : area === 'community' ? <CommunityDashboard view={communityView} /> : <UserDashboard view={userView} onAddTrade={() => setShowTradeForm(true)} />}
       </main>
+      {showTradeForm && <TradeForm accessToken={session?.accessToken} onClose={() => setShowTradeForm(false)} onSaved={() => setShowTradeForm(false)} />}
     </div>
   )
+}
+
+function LoginScreen({ onSignedIn }: { onSignedIn: (session: AuthSession) => void }) {
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setBusy(true)
+    setMessage('')
+    try {
+      if (mode === 'signin') onSignedIn(await signIn(email, password))
+      else {
+        const result = await signUp(email, password)
+        setMessage(result.needsConfirmation ? 'Check your email to confirm your account, then sign in.' : 'Account created. You can now sign in.')
+        setMode('signin')
+      }
+    } catch (error) {
+      setMessage(error instanceof ApiError || error instanceof Error ? error.message : 'Authentication failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return <main className="auth-page"><div className="auth-card"><Brand /><span className="eyebrow">Secure cloud access</span><h1>{mode === 'signin' ? 'Welcome back' : 'Create your journal'}</h1><p>Trade records are stored in your encrypted cloud vault, not in browser storage.</p><form onSubmit={submit}><label>Email<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label><label>Password<input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" /></label>{message && <div className="form-status">{message}</div>}<button className="primary-button auth-submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in securely' : 'Create account'}</button></form><button className="auth-switch" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>{mode === 'signin' ? 'Need an account? Create one' : 'Already registered? Sign in'}</button></div></main>
 }
 
 function Brand() {
   return <div className="brand"><div className="brand-logo">↗</div><div><strong>JournalEdge</strong><span>Journal every trade. Sharpen your edge.</span></div></div>
 }
 
-function UserDashboard({ view }: { view: UserView }) {
-  if (view === 'journal') return <Workspace title="Journal" description="Record every decision with cloud-saved context." action="＋ New trade"><DataTable rows={['NVDA · Long · Breakout', 'EUR/USD · Short · Reversal', 'BTC/USDT · Long · Momentum', 'ESM6 · Short · Failed break']} /></Workspace>
+function UserDashboard({ view, onAddTrade }: { view: UserView; onAddTrade: () => void }) {
+  if (view === 'journal') return <Workspace title="Journal" description="Record every decision with cloud-saved context." action="＋ New trade" onAction={onAddTrade}><DataTable rows={['NVDA · Long · Breakout', 'EUR/USD · Short · Reversal', 'BTC/USDT · Long · Momentum', 'ESM6 · Short · Failed break']} /></Workspace>
   if (view === 'analysis') return <Workspace title="Analysis" description="Turn cloud-saved records into an honest review." action="March 2026"><BarChart title="Strategy performance" rows={['Breakout · +$890 · 66%', 'Reversal · +$210 · 42%', 'Momentum · +$145 · 50%', 'Support · +$108 · 60%']} /></Workspace>
+  if (view === 'market') return <MarketDashboard />
   if (view === 'accounts') return <Workspace title="Accounts" description="Manage live, paper, demo, and prop-firm accounts." action="＋ Connect account"><DataTable rows={['Main account · Interactive Brokers · Live', 'Crypto account · Binance · Live', 'Practice account · Manual · Paper']} /></Workspace>
   if (view === 'settings') return <Workspace title="Settings" description="Update your cloud-saved workspace settings and security." action="Save settings"><SettingsCard /></Workspace>
   return <Workspace title="Performance snapshot" description="Your decisions, measured with context." action="Full analysis →"><MetricGrid metrics={userMetrics} /><div className="content-grid"><ChartCard /><ReviewCard /></div><DataTable rows={['NVDA · +$240 · Plan followed', 'EUR/USD · −$85 · Moved stop', 'BTC/USDT · +$216 · Calm']} /></Workspace>
+}
+
+function MarketDashboard() {
+  return <Workspace title="Market" description="Review instruments and prices before linking a trade." action="Refresh prices"><div className="content-grid"><Card title="Watchlist"><div className="watchlist"><MarketRow symbol="NVDA" price="$118.42" change="+2.4%" /><MarketRow symbol="EUR/USD" price="1.1684" change="−0.3%" negative /><MarketRow symbol="BTC/USDT" price="$68,420" change="+1.1%" /><MarketRow symbol="ESM6" price="6,124.25" change="+0.6%" /></div></Card><MarketQuoteCard /></div><BarChart title="Market coverage" rows={['Stocks · 4,280 instruments', 'Crypto · 2,100 instruments', 'Forex · 180 pairs', 'Futures · 96 contracts']} /></Workspace>
+}
+
+function MarketQuoteCard() {
+  const [symbol, setSymbol] = useState('NVDA')
+  const [message, setMessage] = useState('Manual mode · configure the Worker API for provider quotes.')
+  const [loading, setLoading] = useState(false)
+  async function lookup(event: React.FormEvent) {
+    event.preventDefault()
+    setLoading(true)
+    try {
+      const result = await getQuote(symbol)
+      setMessage(result.price === null ? 'No provider configured; enter prices manually.' : `Provider quote received for ${result.symbol}.`)
+    } catch {
+      setMessage('Quote service is not connected in this environment.')
+    } finally {
+      setLoading(false)
+    }
+  }
+  return <Card title="Quote lookup"><form className="quote-form" onSubmit={lookup}><label>Instrument<input value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} aria-label="Market symbol" /></label><button className="secondary-button" disabled={loading}>{loading ? 'Loading…' : 'Lookup'}</button></form><p className="quote-status">{message}</p></Card>
+}
+
+function MarketRow({ symbol, price, change, negative = false }: { symbol: string; price: string; change: string; negative?: boolean }) {
+  return <div className="market-row"><span className="symbol">{symbol.slice(0, 2)}</span><strong>{symbol}</strong><span>{price}</span><b className={negative ? 'negative' : 'positive'}>{change}</b></div>
+}
+
+function TradeForm({ accessToken, onClose, onSaved }: { accessToken?: string; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState<TradeInput>({ symbol: '', market: 'stocks', side: 'long', quantity: 1, entryPrice: 0, exitPrice: undefined, stopLoss: undefined, takeProfit: undefined, fees: 0, strategy: '', notes: '', psychology: '' })
+  const [status, setStatus] = useState('')
+  const preview = previewTrade(form)
+  const setField = <K extends keyof TradeInput>(key: K, value: TradeInput[K]) => setForm((current) => ({ ...current, [key]: value }))
+  const numberField = (key: 'quantity' | 'entryPrice' | 'exitPrice' | 'stopLoss' | 'takeProfit' | 'fees') => (event: React.ChangeEvent<HTMLInputElement>) => setField(key, event.target.value === '' ? undefined : Number(event.target.value))
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    if (!form.symbol.trim() || form.entryPrice <= 0 || form.quantity <= 0) {
+      setStatus('Enter a symbol, quantity, and entry price to continue.')
+      return
+    }
+    if (!accessToken) {
+      setStatus('Preview complete. Sign in at /login to save this trade to the encrypted R2 vault.')
+      return
+    }
+    try {
+      await saveTrade(form, accessToken)
+      onSaved()
+    } catch (error) {
+      setStatus(error instanceof ApiError ? error.message : 'Unable to save this trade.')
+    }
+  }
+
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="trade-modal" role="dialog" aria-modal="true" aria-labelledby="trade-form-title"><div className="modal-heading"><div><span className="eyebrow">Cloud journal</span><h2 id="trade-form-title">Add trade</h2></div><button className="icon-button" onClick={onClose} aria-label="Close trade form">×</button></div><form onSubmit={submit}><div className="form-grid"><label>Symbol<input value={form.symbol} onChange={(event) => setField('symbol', event.target.value)} placeholder="NVDA" /></label><label>Market<select value={form.market} onChange={(event) => setField('market', event.target.value as TradeMarket)}><option value="stocks">Stocks</option><option value="crypto">Crypto</option><option value="forex">Forex</option><option value="futures">Futures</option><option value="options">Options</option></select></label><label>Direction<select value={form.side} onChange={(event) => setField('side', event.target.value as TradeSide)}><option value="long">Long</option><option value="short">Short</option></select></label><label>Quantity<input type="number" min="0" step="any" value={form.quantity || ''} onChange={numberField('quantity')} /></label><label>Entry price<input type="number" min="0" step="any" value={form.entryPrice || ''} onChange={numberField('entryPrice')} /></label><label>Exit price<input type="number" min="0" step="any" value={form.exitPrice ?? ''} onChange={numberField('exitPrice')} /></label><label>Stop loss<input type="number" min="0" step="any" value={form.stopLoss ?? ''} onChange={numberField('stopLoss')} /></label><label>Take profit<input type="number" min="0" step="any" value={form.takeProfit ?? ''} onChange={numberField('takeProfit')} /></label></div><div className="trade-preview"><span>Live calculation</span><strong className={preview.pnl === undefined ? '' : preview.pnl >= 0 ? 'positive' : 'negative'}>{preview.pnl === undefined ? 'Open trade' : `${preview.pnl >= 0 ? '+' : ''}$${preview.pnl.toFixed(2)}`}</strong><small>Risk {preview.risk === undefined ? '—' : `$${preview.risk.toFixed(2)}`} · Reward {preview.reward === undefined ? '—' : `$${preview.reward.toFixed(2)}`} · R {preview.rMultiple === undefined ? '—' : preview.rMultiple.toFixed(2)}</small></div><label className="wide-field">Notes<textarea value={form.notes} onChange={(event) => setField('notes', event.target.value)} placeholder="Why did you take this trade?" rows={3} /></label>{status && <p className="form-status">{status}</p>}<div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">Validate trade</button></div></form></section></div>
 }
 
 function CommunityDashboard({ view }: { view: CommunityView }) {
@@ -116,8 +209,8 @@ function AdminDashboard({ view }: { view: AdminView }) {
   return <Workspace title="Admin overview" description="Aggregate operations for JournalEdge services." action="Export report"><MetricGrid metrics={adminMetrics} /><div className="content-grid"><Card title="Service health"><Activity title="Cloudflare R2 vaults" detail="Operational · 99.98% availability" /><Activity title="Community monetization" detail="Contextual ads only · 96% consent coverage" /><Activity title="Auth and roles" detail="Operational · no open security incident" /></Card><Card title="Privacy boundary"><div className="privacy-large"><strong>Private content is excluded.</strong><span>Admin dashboards receive aggregate metrics, billing metadata, service events, and audit records—not private trades, notes, or psychology.</span></div></Card></div></Workspace>
 }
 
-function Workspace({ title, description, action, children }: { title: string; description: string; action: string; children: React.ReactNode }) {
-  return <section className="workspace"><div className="workspace-heading"><div><span className="eyebrow">Dashboard</span><h2>{title}</h2><p>{description}</p></div><button className="secondary-button">{action}</button></div>{children}</section>
+function Workspace({ title, description, action, onAction, children }: { title: string; description: string; action: string; onAction?: () => void; children: React.ReactNode }) {
+  return <section className="workspace"><div className="workspace-heading"><div><span className="eyebrow">Dashboard</span><h2>{title}</h2><p>{description}</p></div><button className="secondary-button" onClick={onAction}>{action}</button></div>{children}</section>
 }
 
 function MetricGrid({ metrics }: { metrics: ReadonlyArray<{ label: string; value: string; detail: string; tone: string }> }) {

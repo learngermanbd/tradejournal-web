@@ -1,6 +1,21 @@
-# TradeJournal backend
+# JournalEdge backend
 
-This directory contains the free-first control-plane backend for the TradeJournal web/PWA. It is intentionally separate from the browser client.
+This directory contains the free-first backend for the JournalEdge web/PWA. It is intentionally separate from the browser client.
+
+## Implemented API foundation
+
+`worker/` contains a Cloudflare Worker API with:
+
+- authenticated Supabase session checks
+- encrypted R2 trade vault reads and writes
+- server-side trade validation and P&L/risk calculations
+- delete-by-owner trade operations
+- server-side profile settings updates
+- protected aggregate admin metrics
+- a market quote adapter with a manual fallback
+- CORS allowlisting and security headers
+
+The frontend calls these routes through `VITE_API_BASE_URL`. Configure Supabase and R2 secrets before enabling production writes.
 
 ## Responsibilities
 
@@ -29,7 +44,7 @@ Firebase            optional FCM/Crashlytics services; no trade payloads
 ## Database setup
 
 1. Create a Supabase project.
-2. Apply `supabase/migrations/001_control_plane.sql` with the Supabase SQL editor or CLI.
+2. Apply `supabase/migrations/001_control_plane.sql` and `supabase/migrations/002_product_control_plane.sql` with the Supabase SQL editor or CLI.
 3. Create the first administrator from a trusted server session:
 
 ```sql
@@ -49,6 +64,26 @@ supabase functions deploy admin-overview
 ```
 
 The web client should call the function with the current Supabase access token. Do not ship a service-role key in browser code.
+
+## Worker development
+
+```bash
+cd backend/worker
+npm install
+npm run typecheck
+npm test
+npx wrangler dev
+```
+
+Set the required secrets before deployment:
+
+```bash
+npx wrangler secret put SUPABASE_URL
+npx wrangler secret put SUPABASE_ANON_KEY
+npx wrangler secret put VAULT_ENCRYPTION_KEY
+```
+
+`VAULT_ENCRYPTION_KEY` must be a base64-encoded 32-byte AES key. R2 stores encrypted trade vault objects under a user-scoped key; the browser never receives the encryption secret.
 
 ## Environment variables
 

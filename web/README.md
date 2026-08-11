@@ -4,7 +4,7 @@ TradeJournal is moving from an Android-first prototype to a responsive web appli
 
 ## Current implementation
 
-The first web foundation is now scaffolded in `src/`: a responsive user dashboard, separate community dashboard, protected admin dashboard shell, cloud boundary interfaces, role-aware navigation, theme toggle, mobile layout, and PWA app-shell registration. The dashboard uses representative data until the Worker API and Supabase session boundary are connected; private journal data is never treated as browser storage.
+The first web foundation is now scaffolded in `src/`: a responsive user dashboard, market workspace, separate community dashboard, protected admin dashboard shell, role-aware navigation, theme toggle, mobile layout, PWA app-shell registration, and a trade-entry form with live P&L/risk preview. `src/api.ts` defines the typed Worker API client; configure `VITE_API_BASE_URL` and a real Supabase session before enabling cloud writes. Private journal data is never treated as browser storage.
 
 Run locally with `npm install`, then `npm run dev`. Validate with `npm run typecheck` and `npm run build`.
 
@@ -68,11 +68,11 @@ Only the marketing website and intentionally published community content may be 
 
 ## Core implementation boundaries
 
-- `storage`: Cloudflare R2 vault chunks, attachment objects, and server-side schema migrations
-- `calculations`: shared P&L, risk, margin, and R-multiple formulas
+- `storage`: Cloudflare R2 encrypted vault objects, attachment objects, and server-side schema migrations
+- `calculations`: validated Worker-side P&L, risk, reward, and R-multiple formulas with frontend previews
 - `auth`: Supabase session handling and role verification
 - `sync`: encrypted vault export/import and conflict resolution
-- `integrations`: R2, read-only brokers, billing, AI consent, and monitoring
+- `integrations`: R2, market quote adapter, read-only brokers, billing, AI consent, and monitoring
 - `ui`: responsive components, accessible forms, charts, and localization
 - `monetization`: contextual ads, sponsorships, affiliate disclosures, memberships, and ad-free entitlements
 

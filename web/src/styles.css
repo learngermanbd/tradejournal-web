@@ -24,6 +24,18 @@ body { margin: 0; min-width: 320px; background: #f4f7fb; }
 button { font: inherit; cursor: pointer; }
 button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset: 2px; }
 .app { min-height: 100vh; display: flex; background: radial-gradient(circle at 90% -15%, #e7edff 0, transparent 34%), #f4f7fb; transition: background .2s, color .2s; }
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 22px; background: radial-gradient(circle at 80% 0, #e7edff 0, transparent 40%), #f4f7fb; }
+.auth-card { width: min(420px, 100%); padding: 30px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.auth-card .brand { padding: 0 0 28px; }
+.auth-card h1 { margin: 10px 0 8px; color: var(--ink); font-size: 26px; letter-spacing: -.7px; }
+.auth-card > p { margin: 0 0 23px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.auth-card form { display: grid; gap: 14px; }
+.auth-card label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.auth-card input { padding: 11px 12px; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 7px; font: inherit; font-weight: 500; outline: none; }
+.auth-card input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(64, 89, 215, .11); }
+.auth-submit { width: 100%; margin-top: 3px; }
+.auth-submit:disabled { opacity: .6; cursor: wait; }
+.auth-switch { width: 100%; margin-top: 18px; padding: 7px; border: 0; color: var(--brand); background: transparent; font-size: 10px; }
 .app.dark { --ink: #eef2ff; --muted: #9aa7c1; --line: #2b3853; --surface: #17213a; --soft: #202b45; --blue-soft: #28345e; --green-soft: #163e36; --orange-soft: #473723; background: #10182b; color: var(--ink); }
 .sidebar { width: 256px; flex: 0 0 256px; padding: 28px 18px 22px; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 92%, transparent); min-height: 100vh; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 27px; }
@@ -113,6 +125,32 @@ button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset
 .privacy-large { display: grid; gap: 10px; min-height: 115px; padding: 15px; background: var(--green-soft); border-radius: 8px; }
 .privacy-large strong { color: var(--green); font-size: 11px; }
 .privacy-large span { color: var(--muted); font-size: 10px; line-height: 1.6; }
+.watchlist { display: grid; gap: 2px; }
+.quote-form { display: flex; align-items: flex-end; gap: 8px; }
+.quote-form label { display: grid; gap: 6px; flex: 1; color: var(--muted); font-size: 10px; font-weight: 700; }
+.quote-form input { width: 100%; padding: 10px 11px; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 7px; font: inherit; font-weight: 500; text-transform: uppercase; }
+.quote-form button:disabled { opacity: .6; cursor: wait; }
+.quote-status { min-height: 40px; margin: 17px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.market-row { display: grid; grid-template-columns: 30px minmax(60px, 1fr) auto auto; align-items: center; gap: 10px; min-height: 45px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.market-row:last-child { border-bottom: 0; }
+.market-row strong { color: var(--ink); font-size: 11px; }
+.market-row b { font-size: 10px; text-align: right; }
+.modal-backdrop { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(15, 24, 43, .48); backdrop-filter: blur(5px); }
+.trade-modal { width: min(680px, 100%); max-height: min(770px, 94vh); overflow: auto; padding: 24px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 28px 80px rgba(15, 24, 43, .24); }
+.modal-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; }
+.modal-heading h2 { margin: 7px 0 0; font-size: 21px; }
+.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+.form-grid label, .wide-field { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.form-grid input, .form-grid select, .wide-field textarea { width: 100%; padding: 10px 11px; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 7px; font: inherit; font-weight: 500; outline: none; }
+.form-grid input:focus, .form-grid select:focus, .wide-field textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(64, 89, 215, .11); }
+.wide-field { margin-top: 14px; }
+.wide-field textarea { resize: vertical; line-height: 1.5; }
+.trade-preview { display: flex; align-items: center; gap: 13px; margin-top: 18px; padding: 14px; background: var(--blue-soft); border-radius: 9px; }
+.trade-preview span, .trade-preview small { color: var(--muted); font-size: 10px; }
+.trade-preview strong { font-size: 17px; margin-left: auto; }
+.trade-preview small { min-width: 175px; text-align: right; }
+.form-status { margin: 13px 0 0; padding: 10px; color: var(--orange); background: var(--orange-soft); border-radius: 7px; font-size: 10px; line-height: 1.45; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 21px; }
 .settings-list { display: grid; }
 .settings-list > div { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 0; border-bottom: 1px solid var(--line); }
 .settings-list > div:last-child { border-bottom: 0; }
@@ -150,6 +188,10 @@ button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset
   .metric-card { min-height: 105px; padding: 14px; }
   .metric-card strong { font-size: 18px; margin-top: 10px; }
   .content-grid { grid-template-columns: 1fr; gap: 12px; }
+  .form-grid { grid-template-columns: repeat(2, 1fr); }
+  .trade-preview { flex-wrap: wrap; }
+  .trade-preview strong { margin-left: 0; }
+  .trade-preview small { min-width: 0; text-align: left; width: 100%; }
   .workspace-heading { align-items: flex-start; }
   .workspace-heading h2 { font-size: 18px; }
   .workspace-heading p { max-width: 210px; line-height: 1.4; }
@@ -161,4 +203,6 @@ button:focus-visible { outline: 3px solid rgba(64, 89, 215, .34); outline-offset
   .icon-button { min-width: 31px; height: 31px; }
   .workspace-heading { display: block; }
   .workspace-heading .secondary-button { margin-top: 14px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .trade-modal { padding: 18px; }
 }
