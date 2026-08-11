@@ -28,6 +28,8 @@ export default defineConfig({
         home: 'index.html',
         app: 'app.html',
         marketing: 'marketing.html',
+        privacy: 'privacy.html',
+        adsTerms: 'ads-terms.html',
       },
     },
   },
